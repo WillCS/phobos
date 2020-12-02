@@ -6,5 +6,12 @@ fn main() {
     let contents = fs::read_to_string("input/test.lua")
         .expect("Something bad happened");
 
-    tokenisation::tokenise(&contents);
+    let mut tokeniser = tokenisation::Tokeniser::new(&contents);
+
+    // println!("{}", tokeniser.has_next_char());
+    // while tokeniser.has_next_char() {
+    //     println!("{} at line {}, col {}", tokeniser.get_next_char().unwrap(), tokeniser.location.line, tokeniser.location.col)
+    // }
+
+    
 }

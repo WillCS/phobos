@@ -1,4 +1,7 @@
+use std::str::{Chars, Lines};
+use std::iter::Peekable;
 use std::vec::Vec;
+use std::collections::VecDeque;
 use regex::Regex;
 
 use lazy_static::lazy_static;
@@ -64,87 +67,149 @@ pub enum TokenType<'a> {
     Length,                   // r"#"
     Comment,                  // r"--(?:(?:\[(=*)\[(?:\w|\s|\d)*\]\1\])|.*)"
     Error,                    // r"\b"
-    Identifier(&'a str),      // r"^[a-zA-Z_]\w*\b"
+    Identifier(String),      // r"^[a-zA-Z_]\w*\b"
     StringPrimitive(&'a str), //r"(?:\[(=*)\[((?:.|\s)*)\]\3\])|(?:("|')(.*)\1)"
     NumberPrimitive(f64)      //r"\d(\d|\.|((e|E)(\+|-)?)|\w)*"
 }
 
 pub struct Location {
-    line: usize,
-    col:  usize
+    pub line: usize,
+    pub col:  usize
 }
 
-struct TextInput<'a> {
-    location: Location,
-    current_line: &'a str,
-    line_stack: Vec<&'a str>,
+pub struct Tokeniser<'t> {
+    pub location:                Location,
+    current_line:                Option<Peekable<Chars<'t>>>,
+    line_stack:                  Peekable<Lines<'t>>,
+    constructing_token:          Vec<char>,
+    constructing_token_location: Location
 }
 
-impl TextInput<'_> {
-    pub fn pop_token(&mut self) -> Result<Token, &str> {
-        self.pop_line_if_empty().and_then(|_| {
-            Ok(self.read_token())
-        })
+impl Tokeniser<'_> {
+    pub fn new(source: &str) -> Tokeniser {
+        let mut lines = source.lines();
+
+        Tokeniser {
+            location:                    Location { line: 1, col: 0 },
+            current_line:                lines.next().map(|line| { line.chars().peekable() }),
+            line_stack:                  lines.peekable(),
+            constructing_token:          Vec::new(),
+            constructing_token_location: Location { line: 0, col: 0}
+        }
     }
 
-    fn read_token(&mut self) -> Token {
-        self.trim_current_line();
+    pub fn tokenise(&mut self) -> VecDeque<Token> {
+        let mut token_deque = VecDeque::<Token>::new();
 
-        match self.current_line.chars().next() {
-            None             => TokenType::Error,
-            Some(first_char) => match first_char {
-                '_'                   => Token {
-                    token_type: match parse_identifier(self.current_line) {
-                        None       => TokenType::Error,
-                        Some(name) => TokenType::Identifier(name)
-                    },
-                    location: Location { ..self.location }
-                }, // definitely an identifier
-                'A'..='Z' | 'a'..='z' => None, // maybe an identifier, maybe a keyword
-                '0'..='9'             => None, // definitely a number
-                '\'' | '"'            => None, // definitely a string
-                _                     => None, // maybe a comment, maybe a symbol, maybe a string
+        while self.has_next_char() {
+            let optional_next_char = self.get_next_char();
+            let matched_token = optional_next_char
+                .map(|next_char| {
+                    self.constructing_token_location = Location { ..self.location };
+                    self.constructing_token.push(next_char);
+                    
+                    match next_char {
+                        '_'                   => self.parse_identifier(),
+                        'A'..='Z' | 'a'..='z' => self.get_error_token(), // maybe an identifier, maybe a keyword
+                        '0'..='9'             => self.get_error_token(), // definitely a number
+                        '\'' | '"'            => self.get_error_token(), // definitely a string
+                        _                     => self.get_error_token(), // maybe a comment, maybe a symbol, maybe a string
+                    }
+                }).map(|token| {
+                    token_deque.push_back(token);
+                });
+        }
+
+        return token_deque
+    }
+
+    pub fn get_next_char(&mut self) -> Option<char> {
+        if self.current_line.is_none() {
+            return None
+        }
+
+        self.location.col = self.location.col + 1;
+        
+        self.current_line
+            .as_mut()
+            .and_then(|line| { line.next() })
+            .or_else(|| {               
+                self.location.line = self.location.line + 1;
+                self.location.col  = 0;
+
+                self.current_line = self.line_stack.next().map(|line| { 
+                    line.chars().peekable()
+                });
+                
+                Some('\n')
+                // self.get_next_char()
+            })
+    }
+
+    pub fn peek_next_char(&mut self) -> Option<char> {
+        if self.current_line.is_none() {
+            return None
+        }
+
+        let has_next_line = self.line_stack.peek().is_some();
+
+        self.current_line
+            .as_mut()
+            .and_then(|line| { line.peek() })
+            .map(|c| { c.clone() })
+            .or_else(|| {
+                if has_next_line {
+                    Some('\n')
+                } else {
+                    None
+                }
+            })
+    }
+
+    pub fn has_next_char(&mut self) -> bool {
+        self.current_line
+            .as_mut()
+            .map(|line| line.peek().is_some())
+            .unwrap_or(false) || 
+        self.line_stack.peek()
+            .map(|line| !line.is_empty())
+            .unwrap_or(false)
+    }
+
+    fn parse_identifier(&mut self) -> Token {
+        loop {
+            let next_char = self.peek_next_char();
+
+            let parsed_token = next_char.map(|c| {
+                match c {
+                    '_'|'A'..='Z' | 'a'..='z'|'0'..='9' => {
+                        self.constructing_token.push(c);
+                        false
+                    }
+                    _ => true
+                }
+            }).unwrap();
+
+            if parsed_token {
+                let identifier = self.constructing_token.iter().collect::<String>().clone();
+                return Token {
+                    token_type: TokenType::Identifier(identifier),
+                    location:   Location { ..self.constructing_token_location }
+                }
+            } else {
+                self.get_next_char();
             }
         }
 
+        // self.get_next_char().and_then(|next_char| {
+
+        // }).unwrap_or(self.get_error_token())
+    }
+
+    fn get_error_token(&mut self) -> Token {
         Token {
             token_type: TokenType::Error,
-            location:   Location { ..self.location }
+            location:   Location { ..self.constructing_token_location }
         }
     }
-
-    fn trim_current_line(&mut self) {
-        let len_before_trim = self.current_line.chars().count();
-
-        self.current_line = self.current_line.trim_start();
-
-        let len_after_trim = self.current_line.chars().count();
-
-        if len_before_trim != len_after_trim {
-            self.location.col += len_before_trim - len_after_trim;
-        }
-    }
-
-    fn pop_line(&mut self) -> Result<(), &str> {
-        self.location.line = self.location.line + 1;
-
-        match self.line_stack.pop() {
-            None       => Err("reached end of file"),
-            Some(line) => Ok(self.current_line = &[self.current_line, line].concat())
-        }
-    }
-
-    fn pop_line_if_empty(&mut self) -> Result<(), &str> {
-        if self.current_line.is_empty() {
-            self.pop_line()
-        } else {
-            Ok(())
-        }
-    }
-}
-
-fn parse_identifier(line: &str) -> Option<&str> {
-    identifier_regex.find(line).map(|mat| {
-        mat.as_str()
-    })
 }
