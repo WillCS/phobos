@@ -11,11 +11,11 @@ fn main() {
     match tokeniser.tokenise() {
         Ok(tokens) => {
             for token in tokens {
-                println!("{}", token)
+                println!("{:?}", token)
             }
         },
         Err(error) => {
-            println!("{:?}", error)
+            println!("{}", error)
         }
     }
 }

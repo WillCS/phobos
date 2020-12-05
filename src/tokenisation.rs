@@ -1,14 +1,13 @@
 use std::fmt::Formatter;
 use std::fmt::Display;
 use std::str::{Chars, Lines};
-use std::iter::{FromIterator, Peekable};
+use std::iter::Peekable;
 use std::vec::Vec;
 use std::collections::VecDeque;
 
 #[derive(Debug)]
 pub struct TokenisationError {
-    pub partial_token: String,
-    pub location:      Location,
+    pub partial_token: Token,
     pub error_type:    TokenisationErrorType
 }
 
@@ -17,9 +16,38 @@ pub enum TokenisationErrorType {
     MalformedNumber,
     UnfinishedString,
     UnfinishedLongString,
+    UnfinishedLongComment,
     Unimplemented
 }
 
+impl Display for TokenisationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        match &self.error_type {
+            TokenisationErrorType::MalformedNumber  => {
+                write!(f, "{}: malformed number near {}",
+                    self.partial_token.location.line,
+                    self.partial_token
+                )
+            },
+            TokenisationErrorType::UnfinishedString => {
+                write!(f, "{}: unfinished string near {}",
+                    self.partial_token.location.line,
+                    self.partial_token
+                )
+            },
+            TokenisationErrorType::UnfinishedLongString => {
+                write!(f, "{}: unfinished long string (starting at line {}) near {}",
+                    self.partial_token.location.line,
+                    self.partial_token.location.line,
+                    self.partial_token
+                )
+            },
+            t @ _ => write!(f, "{}: {:?}", self.partial_token.location.line, t)
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Token {
     token_type: TokenType,
     location:   Location
@@ -28,9 +56,11 @@ pub struct Token {
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         match &self.token_type {
-            TokenType::Identifier(name)      => write!(f, "Identifier({}) at {}", name, self.location),
-            TokenType::StringLiteral(name)   => write!(f, "String({}) at {}", name, self.location),
-            TokenType::NumberLiteral(number) => write!(f, "Number({}) at {}", number, self.location),
+            TokenType::Identifier(name)      => write!(f, "{}", name),
+            TokenType::StringLiteral(value)  => write!(f, "'{}'", value),
+            TokenType::NumberLiteral(number) => write!(f, "'{}'", number),
+            TokenType::Error(value)          => write!(f, "'{}'", value),
+            TokenType::EndOfFile             => write!(f, "<eof>"),
             token @ _                        => write!(f, "{:?} at {} ", token, self.location)
         }
     }
@@ -38,57 +68,62 @@ impl Display for Token {
 
 #[derive(Debug)]
 pub enum TokenType {
-    End,                     // r"\bend\b"
-    Do,                      // r"\bdo\b"
-    While,                   // r"\bwhile\b"
-    Repeat,                  // r"\brepeat\b"
-    Until,                   // r"\buntil\b"
-    If,                      // r"\bif\b"
-    In,                      // r"\bin\b"
-    Then,                    // r"\bthen\b"
-    Elseif,                  // r"\belseif\b"
-    Else,                    // r"\belse\b"
-    For,                     // r"\bfor\b"
-    Function,                // r"\bfunction\b"
-    Local,                   // r"\blocal\b"
-    Return,                  // r"\breturn\b"
-    Break,                   // r"\bbreak\b"
-    True,                    // r"\btrue\b"
-    False,                   // r"\bfalse\b"
-    Nil,                     // r"\bnil\b"
-    And,                     // r"\band\b"
-    Or,                      // r"\bor\b"
-    Not,                     // r"\bnot\b"
-    Equals,                  // r"={1,2}|>=|<=|~="
-    DoubleEquals,            // r"={1,2}|>=|<=|~="
-    Dot,                     // r"\.{1,3}
-    Colon,                   // r":"
-    Comma,                   // r","
-    LeftBracket,             // r"\["
-    RightBracket,            // r"\]"
-    LeftParenthesis,         // r"\("
-    RightParenthesis,        // r"\)"
-    LeftBrace,               // r"{"
-    RightBrace,              // r"}"
-    Varargs,                 // r"\.{1,3}"
-    Semicolon,               // r";"
-    Plus,                    // r"\+"
-    Minus,                   // r"-"
-    Multiply,                // r"\*"
-    Divide,                  // r"\/"
-    Power,                   // r"\^"
-    Modulo,                  // r"%"
-    Concat,                  // r"\.{1,3}"
-    LessThan,                // r"<"
-    LessEq,                  // r"={1,2}|>=|<=|~="
-    GreaterThan,             // r">"
-    GreaterEq,               // r"={1,2}|>=|<=|~="
-    NotEq,                   // r"={1,2}|>=|<=|~="
-    Length,                  // r"#"
-    Comment,                 // r"--(?:(?:\[(=*)\[(?:\w|\s|\d)*\]\1\])|.*)"
-    Error,                   // r"\b"
+    End,                   // r"\bend\b"
+    Do,                    // r"\bdo\b"
+    While,                 // r"\bwhile\b"
+    Repeat,                // r"\brepeat\b"
+    Until,                 // r"\buntil\b"
+    If,                    // r"\bif\b"
+    In,                    // r"\bin\b"
+    Then,                  // r"\bthen\b"
+    Elseif,                // r"\belseif\b"
+    Else,                  // r"\belse\b"
+    For,                   // r"\bfor\b"
+    Function,              // r"\bfunction\b"
+    Local,                 // r"\blocal\b"
+    Return,                // r"\breturn\b"
+    Break,                 // r"\bbreak\b"
+    True,                  // r"\btrue\b"
+    False,                 // r"\bfalse\b"
+    Nil,                   // r"\bnil\b"
+    And,                   // r"\band\b"
+    Or,                    // r"\bor\b"
+    Not,                   // r"\bnot\b"
+    Equals,                // r"={1,2}|>=|<=|~="
+    DoubleEquals,          // r"={1,2}|>=|<=|~="
+    Dot,                   // r"\.{1,3}
+    Colon,                 // r":"
+    Comma,                 // r","
+    LeftBracket,           // r"\["
+    RightBracket,          // r"\]"
+    LeftParenthesis,       // r"\("
+    RightParenthesis,      // r"\)"
+    LeftBrace,             // r"{"
+    RightBrace,            // r"}"
+    LeftShift,             // r"<<"
+    RightShift,            // r">>"
+    BitwiseAnd,            // r"&"
+    BitwiseOr,             // r"\|"
+    BitwiseNeg,            // r"~"
+    Varargs,               // r"\.{1,3}"
+    Semicolon,             // r";"
+    Plus,                  // r"\+"
+    Minus,                 // r"-"
+    Multiply,              // r"\*"
+    Divide,                // r"\/"
+    Power,                 // r"\^"
+    Modulo,                // r"%"
+    Concat,                // r"\.{1,3}"
+    LessThan,              // r"<"
+    LessEq,                // r"={1,2}|>=|<=|~="
+    GreaterThan,           // r">"
+    GreaterEq,             // r"={1,2}|>=|<=|~="
+    NotEq,                 // r"={1,2}|>=|<=|~="
+    Length,                // r"#"
+    Comment,               // r"--(?:(?:\[(=*)\[(?:\w|\s|\d)*\]\1\])|.*)"
     EndOfFile,
-    Identifier(String),      // r"^[a-zA-Z_]\w*\b"
+    Error(String),         // r"\b"
+    Identifier(String),    // r"^[a-zA-Z_]\w*\b"
     StringLiteral(String), // r"(?:\[(=*)\[((?:.|\s)*)\]\3\])|(?:("|')(.*)\1)"
     NumberLiteral(f64)     // r"\d(\d|\.|((e|E)(\+|-)?)|\w)*"
 }
@@ -134,7 +169,6 @@ impl<'t> Tokeniser<'t> {
             self.constructing_token.clear();
 
             self.match_start_char().map(|token| {
-                println!("{}", token);
                 token_deque.push_back(token)
             })?;
 
@@ -157,7 +191,9 @@ impl<'t> Tokeniser<'t> {
                     '_' | 'A'..='Z' | 'a'..='z' => self.parse_identifier(), // maybe an identifier, maybe a keyword
                     '0'..='9'                   => self.parse_number(),  // definitely a number
                     '\'' | '"'                  => self.parse_single_line_string(),  // definitely a string
-                    _                           => Err(self.get_tokenisation_error(TokenisationErrorType::Unimplemented)),  // maybe a comment, maybe a symbol, maybe a string
+                    '-'                         => self.parse_comment_or_minus(),
+                    '['                         => self.parse_long_string_or_bracket(),
+                    _                           => self.parse_symbol(),  // maybe a comment, maybe a symbol, maybe a string
                 };
                 
                 self.trim_whitespace();
@@ -265,9 +301,14 @@ impl<'t> Tokeniser<'t> {
                     self.constructing_token.push(unwrapped_char);
                     self.get_next_char();
                     next_char = self.peek_next_char();
+
                     still_parsing = unwrapped_char != opening_char;
                 }
             };
+        }
+
+        if still_parsing && next_char.is_none() {
+            errored = true;
         }
 
         if errored {
@@ -292,7 +333,7 @@ impl<'t> Tokeniser<'t> {
         while next_char.is_some() && still_parsing {
             let unwrapped_char = next_char.unwrap();
             match unwrapped_char {
-                'A'..='Z' | 'a'..='z' | '0'..='9' | '.' => {},
+                'A'..='Z' | 'a'..='z' | '0'..='9' | '.' | '_' => {},
                 '+' | '-' if prev_char_e                => {},
                 _ => { still_parsing = false; }
             }
@@ -319,22 +360,276 @@ impl<'t> Tokeniser<'t> {
             })
     }
 
+    fn parse_comment_or_minus(&mut self) -> Result<Token, TokenisationError> {
+        let mut next_char = self.peek_next_char();
+
+        match next_char {
+            Some(c @ '-') => {
+                self.constructing_token.push(c);
+                self.get_next_char();
+
+                match self.peek_next_char() {
+                    Some('[') => {
+                        self.constructing_token.push(c);
+                        self.get_next_char();
+                        
+                        match self.parse_multiline() {
+                            Some(_) => {
+                                Ok(Token {
+                                    token_type: TokenType::Comment,
+                                    location:   self.constructing_token_location
+                                })
+                            },
+                            None => Err(self.get_tokenisation_error(TokenisationErrorType::UnfinishedLongComment))
+                        }
+                    },
+                    _ => {
+                        next_char = self.peek_next_char();
+                        while next_char.is_some() && next_char.unwrap() != '\n' {
+                            self.constructing_token.push(c);
+                            self.get_next_char();
+                            next_char = self.peek_next_char();
+                        };
+
+                        Ok(Token {
+                            token_type: TokenType::Comment,
+                            location:   self.constructing_token_location
+                        })
+
+                    }
+                }
+            },
+            _ => {
+                Ok(Token {
+                    token_type: TokenType::Minus,
+                    location:   self.constructing_token_location
+                })
+            }
+        }
+    }
+
+    fn parse_long_string_or_bracket(&mut self) -> Result<Token, TokenisationError> {
+        let next_char  = self.peek_next_char();
+
+        match next_char {
+            Some('=') | Some('[') => match self.parse_multiline() {
+                Some((value, depth)) => {
+                    let string_len      = value.len();
+                    let to_cut_out      = depth + 2;
+                    let string_contents = &value[to_cut_out..(string_len - to_cut_out)];
+
+                    Ok(Token {
+                        token_type: TokenType::StringLiteral(String::from(string_contents)),
+                        location:   self.constructing_token_location
+                    })
+                },
+                None => Err(self.get_tokenisation_error(TokenisationErrorType::UnfinishedLongString))
+            },
+            _ => Ok(Token {
+                token_type: TokenType::LeftBracket,
+                location:   self.constructing_token_location
+            })
+        }
+    }
+
+    fn parse_symbol(&mut self) -> Result<Token, TokenisationError> {
+        let first_char  = self.constructing_token.last().unwrap().clone();
+
+        let token_type = match first_char {
+            ':' => TokenType::Colon,
+            ',' => TokenType::Comma,
+            '[' => TokenType::RightBracket,
+            ']' => TokenType::RightBracket,
+            '(' => TokenType::LeftParenthesis,
+            ')' => TokenType::RightParenthesis,
+            '{' => TokenType::LeftBrace,
+            '}' => TokenType::RightBrace,
+            ';' => TokenType::Semicolon,
+            '+' => TokenType::Plus,
+            '-' => TokenType::Minus,
+            '*' => TokenType::Multiply,
+            '^' => TokenType::Power,
+            '/' => TokenType::Divide,
+            '%' => TokenType::Modulo,
+            '#' => TokenType::Length,
+            '&' => TokenType::BitwiseAnd,
+            '|' => TokenType::BitwiseOr,
+            '<' => {
+                 match self.peek_next_char() {
+                     Some(unwrapped_char @ '=') => {
+                        self.constructing_token.push(unwrapped_char);
+                        TokenType::LessEq
+                     },
+                     Some(unwrapped_char @ '>') => {
+                        self.constructing_token.push(unwrapped_char);
+                        TokenType::LeftShift
+                     },
+                     _ => {
+                         TokenType::LessThan
+                     }
+                }
+            },
+            '>' => {
+                match self.peek_next_char() {
+                    Some(unwrapped_char @ '=') => {
+                       self.constructing_token.push(unwrapped_char);
+                       TokenType::GreaterEq
+                    },
+                    Some(unwrapped_char @ '>') => {
+                       self.constructing_token.push(unwrapped_char);
+                       TokenType::RightShift
+                    },
+                    _ => {
+                        TokenType::GreaterThan
+                    }
+                }
+            },
+            '=' => {
+                match self.peek_next_char() {
+                    Some(unwrapped_char @ '=') => {
+                       self.constructing_token.push(unwrapped_char);
+                       TokenType::DoubleEquals
+                    },
+                    _ => {
+                        TokenType::Equals
+                    }
+                }
+            },
+            '~' => {
+                match self.peek_next_char() {
+                    Some(unwrapped_char @ '=') => {
+                       self.constructing_token.push(unwrapped_char);
+                       TokenType::NotEq
+                    },
+                    _ => {
+                        TokenType::BitwiseNeg
+                    }
+                }
+            },
+            '.' => {
+                match self.peek_next_char() {
+                    Some(unwrapped_char @ '.') => {
+                       self.constructing_token.push(unwrapped_char);
+                       self.get_next_char();
+
+                       match self.peek_next_char() {
+                            Some(unwrapped_char @ '.') => {
+                                self.constructing_token.push(unwrapped_char);
+                                self.get_next_char();
+                                TokenType::Varargs
+                            },
+                            _ => {
+                                TokenType::Concat
+                            }
+                        }
+                    },
+                    _ => {
+                        TokenType::Dot
+                    }
+               }
+            },
+            _ => TokenType::Error(self.collect_token())
+        };
+
+        Ok(Token {
+            token_type: token_type,
+            location:   self.constructing_token_location
+        })
+    }
+
+    fn parse_multiline(&mut self) -> Option<(String, usize)> {
+        let mut depth = 0;
+        let mut next_char = self.peek_next_char();
+
+        while next_char.is_some() && next_char.unwrap() == '=' {
+            let unwrapped_char = next_char.unwrap();
+            self.constructing_token.push(unwrapped_char);
+            depth += 1;
+
+            self.get_next_char();
+            next_char = self.peek_next_char();
+        }
+
+        if next_char.is_some() && next_char.unwrap() == '[' {
+            let unwrapped_char = next_char.unwrap();
+            self.constructing_token.push(unwrapped_char);
+
+            self.get_next_char();
+            next_char = self.peek_next_char();
+        } else {
+            return None;
+        }
+
+        loop {
+            match next_char {
+                Some(']') => {
+                    let unwrapped_char = next_char.unwrap();
+                    self.constructing_token.push(unwrapped_char);
+        
+                    self.get_next_char();
+                    next_char = self.peek_next_char();
+
+                    let mut comp_depth = 0;
+
+                    while next_char.is_some() && next_char.unwrap() == '=' {
+                        let unwrapped_char = next_char.unwrap();
+                        self.constructing_token.push(unwrapped_char);
+                        comp_depth += 1;
+
+                        self.get_next_char();
+                        next_char = self.peek_next_char();
+                    }
+
+                    if next_char.is_some() && next_char.unwrap() == ']' {
+                        let unwrapped_char = next_char.unwrap();
+                        self.constructing_token.push(unwrapped_char);
+                        self.get_next_char();
+                        
+                        if comp_depth == depth {
+                            break
+                        } else {
+                            next_char = self.peek_next_char();
+                        }
+                    }
+                },
+                Some(_) => {
+                    let unwrapped_char = next_char.unwrap();
+                    self.constructing_token.push(unwrapped_char);
+        
+                    self.get_next_char();
+                    next_char = self.peek_next_char();
+                },
+                None => {
+                    return None;
+                }
+            }
+        }
+
+        return Some((self.collect_token(), depth))
+    }
+
     fn collect_token(&mut self) -> String {
         self.constructing_token.iter().collect::<String>().clone()
     }
 
     fn get_tokenisation_error(&mut self, error_type: TokenisationErrorType) -> TokenisationError {
         TokenisationError {
-            partial_token: self.collect_token(),
-            location:      self.location,
+            partial_token: self.get_error_token(),
             error_type:    error_type
         }
     }
 
-    fn get_eof_token(&mut self) -> Token {
+    fn get_error_token(&mut self) -> Token {
+        Token {
+            token_type: TokenType::Error(self.collect_token()),
+            location:   self.constructing_token_location
+        }
+    }
+
+    fn get_eof_token(&self) -> Token {
         Token {
             token_type: TokenType::EndOfFile,
-            location:   self.location
+            location:   self.constructing_token_location
         }
     }
 
