@@ -1,7 +1,7 @@
 use std::fmt::Formatter;
 use std::fmt::Display;
 use std::str::{Chars, Lines};
-use std::iter::Peekable;
+use std::iter::{FromIterator, Peekable};
 use std::vec::Vec;
 use std::collections::VecDeque;
 use regex::Regex;
@@ -23,67 +23,67 @@ impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         match &self.token_type {
             TokenType::Identifier(name)        => write!(f, "Identifier({}) at {}", name, self.location),
-            TokenType::StringPrimitive(name)   => write!(f, "String({}) at {}", name, self.location),
-            TokenType::NumberPrimitive(number) => write!(f, "Number({}) at {}", number, self.location),
-            token @ _                          => write!(f, "{:?} ", token)
+            TokenType::StringLiteral(name)   => write!(f, "String({}) at {}", name, self.location),
+            TokenType::NumberLiteral(number) => write!(f, "Number({}) at {}", number, self.location),
+            token @ _                          => write!(f, "{:?} at {} ", token, self.location)
         }
     }
 }
 
 #[derive(Debug)]
 pub enum TokenType {
-    End,                      // r"\bend\b"
-    Do,                       // r"\bdo\b"
-    While,                    // r"\bwhile\b"
-    Repeat,                   // r"\brepeat\b"
-    Until,                    // r"\buntil\b"
-    If,                       // r"\bif\b"
-    In,                       // r"\bin\b"
-    Then,                     // r"\bthen\b"
-    Elseif,                   // r"\belseif\b"
-    Else,                     // r"\belse\b"
-    For,                      // r"\bfor\b"
-    Function,                 // r"\bfunction\b"
-    Local,                    // r"\blocal\b"
-    Return,                   // r"\breturn\b"
-    Break,                    // r"\bbreak\b"
-    True,                     // r"\btrue\b"
-    False,                    // r"\bfalse\b"
-    Nil,                      // r"\bnil\b"
-    And,                      // r"\band\b"
-    Or,                       // r"\bor\b"
-    Not,                      // r"\bnot\b"
-    Equals,                   // r"={1,2}|>=|<=|~="
-    DoubleEquals,             // r"={1,2}|>=|<=|~="
-    Dot,                      // r"\.{1,3}
-    Colon,                    // r":"
-    Comma,                    // r","
-    LeftBracket,              // r"\["
-    RightBracket,             // r"\]"
-    LeftParenthesis,          // r"\("
-    RightParenthesis,         // r"\)"
-    LeftBrace,                // r"{"
-    RightBrace,               // r"}"
-    Varargs,                  // r"\.{1,3}"
-    Semicolon,                // r";"
-    Plus,                     // r"\+"
-    Minus,                    // r"-"
-    Multiply,                 // r"\*"
-    Divide,                   // r"\/"
-    Power,                    // r"\^"
-    Modulo,                   // r"%"
-    Concat,                   // r"\.{1,3}"
-    LessThan,                 // r"<"
-    LessEq,                   // r"={1,2}|>=|<=|~="
-    GreaterThan,              // r">"
-    GreaterEq,                // r"={1,2}|>=|<=|~="
-    NotEq,                    // r"={1,2}|>=|<=|~="
-    Length,                   // r"#"
-    Comment,                  // r"--(?:(?:\[(=*)\[(?:\w|\s|\d)*\]\1\])|.*)"
-    Error,                    // r"\b"
+    End,                     // r"\bend\b"
+    Do,                      // r"\bdo\b"
+    While,                   // r"\bwhile\b"
+    Repeat,                  // r"\brepeat\b"
+    Until,                   // r"\buntil\b"
+    If,                      // r"\bif\b"
+    In,                      // r"\bin\b"
+    Then,                    // r"\bthen\b"
+    Elseif,                  // r"\belseif\b"
+    Else,                    // r"\belse\b"
+    For,                     // r"\bfor\b"
+    Function,                // r"\bfunction\b"
+    Local,                   // r"\blocal\b"
+    Return,                  // r"\breturn\b"
+    Break,                   // r"\bbreak\b"
+    True,                    // r"\btrue\b"
+    False,                   // r"\bfalse\b"
+    Nil,                     // r"\bnil\b"
+    And,                     // r"\band\b"
+    Or,                      // r"\bor\b"
+    Not,                     // r"\bnot\b"
+    Equals,                  // r"={1,2}|>=|<=|~="
+    DoubleEquals,            // r"={1,2}|>=|<=|~="
+    Dot,                     // r"\.{1,3}
+    Colon,                   // r":"
+    Comma,                   // r","
+    LeftBracket,             // r"\["
+    RightBracket,            // r"\]"
+    LeftParenthesis,         // r"\("
+    RightParenthesis,        // r"\)"
+    LeftBrace,               // r"{"
+    RightBrace,              // r"}"
+    Varargs,                 // r"\.{1,3}"
+    Semicolon,               // r";"
+    Plus,                    // r"\+"
+    Minus,                   // r"-"
+    Multiply,                // r"\*"
+    Divide,                  // r"\/"
+    Power,                   // r"\^"
+    Modulo,                  // r"%"
+    Concat,                  // r"\.{1,3}"
+    LessThan,                // r"<"
+    LessEq,                  // r"={1,2}|>=|<=|~="
+    GreaterThan,             // r">"
+    GreaterEq,               // r"={1,2}|>=|<=|~="
+    NotEq,                   // r"={1,2}|>=|<=|~="
+    Length,                  // r"#"
+    Comment,                 // r"--(?:(?:\[(=*)\[(?:\w|\s|\d)*\]\1\])|.*)"
+    Error,                   // r"\b"
     Identifier(String),      // r"^[a-zA-Z_]\w*\b"
-    StringPrimitive(String), //r"(?:\[(=*)\[((?:.|\s)*)\]\3\])|(?:("|')(.*)\1)"
-    NumberPrimitive(f64)      //r"\d(\d|\.|((e|E)(\+|-)?)|\w)*"
+    StringLiteral(String), // r"(?:\[(=*)\[((?:.|\s)*)\]\3\])|(?:("|')(.*)\1)"
+    NumberLiteral(f64)     // r"\d(\d|\.|((e|E)(\+|-)?)|\w)*"
 }
 
 pub struct Location {
@@ -132,23 +132,31 @@ impl<'t> Tokeniser<'t> {
             has_next_char = self.has_next_char();
         }
 
-        return token_deque
+        return VecDeque::from_iter(token_deque.into_iter().map(|token| match token {
+            Token { token_type: TokenType::Identifier(_), location: _ } => maybe_convert_to_keyword(token),
+            _ => token
+        }));
     }
 
     fn match_start_char(&mut self) -> Option<Token> {
+        self.trim_whitespace();
+
         self.get_next_char()
             .as_ref()
             .map(|next_char| {
                 self.constructing_token_location = Location { ..self.location };
                 self.constructing_token.push(*next_char);
                 
-                match next_char {
-                    '_'                   => self.parse_identifier(),
-                    'A'..='Z' | 'a'..='z' => self.parse_keyword_or_identifier(), // maybe an identifier, maybe a keyword
-                    '0'..='9'             => self.get_error_token(), // definitely a number
-                    '\'' | '"'            => self.get_error_token(), // definitely a string
-                    _                     => self.get_error_token(), // maybe a comment, maybe a symbol, maybe a string
-                }
+                let token = match next_char {
+                    '_' | 'A'..='Z' | 'a'..='z' => self.parse_identifier(), // maybe an identifier, maybe a keyword
+                    '0'..='9'                   => self.parse_number(),  // definitely a number
+                    '\'' | '"'                  => self.parse_single_line_string(),  // definitely a string
+                    _                           => self.get_error_token(),  // maybe a comment, maybe a symbol, maybe a string
+                };
+                
+                self.trim_whitespace();
+
+                return token;
             })
     }
 
@@ -205,18 +213,35 @@ impl<'t> Tokeniser<'t> {
             .unwrap_or(false)
     }
 
+    fn trim_whitespace(&mut self) {
+        loop {
+            let should_break = self.peek_next_char().map(|next_char| {
+                let should_break = next_char.is_whitespace();
+                if should_break {
+                    self.get_next_char();
+                }
+
+                return should_break
+            });
+
+            if should_break.is_some() && !should_break.unwrap() {
+                break;
+            } else if should_break.is_none() {
+                break;
+            }
+        }
+    }
+
     fn parse_identifier(&mut self) -> Token {
         loop {
             let next_char = self.peek_next_char();
 
-            let parsed_token = next_char.map(|c| {
-                match c {
-                    '_'|'A'..='Z' | 'a'..='z'|'0'..='9' => {
-                        self.constructing_token.push(c);
-                        false
-                    }
-                    _ => true
+            let parsed_token = next_char.map(|c| match c {
+                '_'|'A'..='Z' | 'a'..='z'|'0'..='9' => {
+                    self.constructing_token.push(c);
+                    false
                 }
+                _ => true
             }).unwrap_or(true);
 
             if parsed_token {
@@ -231,55 +256,39 @@ impl<'t> Tokeniser<'t> {
         }
     }
 
-    fn parse_keyword_or_identifier(&mut self) -> Token {
-        let next_char = self.peek_next_char();
-
-        next_char.map(|c| {
-            match c {
-                'h' if *self.constructing_token.last().unwrap() == 'w' => self.parse_while_keyword(),
-                _ => self.parse_identifier()
-            }
-
-        }).unwrap()
+    fn parse_number(&mut self) -> Token {
+        self.get_error_token()
     }
+    
+    fn parse_single_line_string(&mut self) -> Token {
+        let opening_char = self.constructing_token.last().unwrap().clone();
 
-    fn parse_while_keyword(&mut self) -> Token {
         loop {
             let next_char = self.peek_next_char();
 
-            let parsed_token = next_char.and_then(|c| {
-                let last_char = *self.constructing_token.last().unwrap();
-                match c {
-                    'h' if last_char == 'w' => {
-                        self.constructing_token.push(c);
-                        Some(false)
-                    },
-                    'i' if last_char == 'h' => {
-                        self.constructing_token.push(c);
-                        Some(false)
-                    },
-                    'l' if last_char == 'i' => {
-                        self.constructing_token.push(c);
-                        Some(false)
-                    },
-                    'e' if last_char == 'l' => {
-                        self.constructing_token.push(c);
-                        Some(false)
-                    },
-                    _ if last_char == 'e' => Some(true),
-                    _ => None
+            let parsed_token = next_char.and_then(|c| match c {
+                '\n' =>  None,
+                _    => {
+                    self.constructing_token.push(c);
+                    self.get_next_char();
+                    Some(c == opening_char)
                 }
             });
-            
-            if parsed_token.is_some() && parsed_token.unwrap() {
-                return Token {
-                    token_type: TokenType::While,
-                    location:   Location { ..self.constructing_token_location }
+
+            if parsed_token.is_some() {
+                if parsed_token.unwrap() {
+                    let contents = self.constructing_token.iter().collect::<String>().clone();
+                    let len = contents.len() - 1;
+
+                    return Token {
+                        token_type: TokenType::StringLiteral(contents[1..len].to_string()),
+                        location: Location { ..self.constructing_token_location }
+                    }
+                } else {
+                    self.get_next_char();
                 }
-            } else if parsed_token.is_some() {
-                self.get_next_char();
             } else {
-                return self.parse_identifier();
+                return self.get_error_token();
             }
         }
     }
@@ -289,5 +298,38 @@ impl<'t> Tokeniser<'t> {
             token_type: TokenType::Error,
             location:   Location { ..self.constructing_token_location }
         }
+    }
+}
+
+fn maybe_convert_to_keyword(token: Token) -> Token {
+    Token {
+        token_type: match token.token_type {
+            TokenType::Identifier(name) => match name.as_str() {
+                "end"      => TokenType::End,
+                "do"       => TokenType::Do,
+                "while"    => TokenType::While,
+                "repeat"   => TokenType::Repeat,
+                "until"    => TokenType::Until,
+                "if"       => TokenType::If,
+                "in"       => TokenType::In,
+                "then"     => TokenType::Then,
+                "elseif"   => TokenType::Elseif,
+                "else"     => TokenType::Else,
+                "for"      => TokenType::For,
+                "function" => TokenType::Function,
+                "local"    => TokenType::Local,
+                "return"   => TokenType::Return,
+                "break"    => TokenType::Break,
+                "true"     => TokenType::True,
+                "false"    => TokenType::False,
+                "nil"      => TokenType::Nil,
+                "and"      => TokenType::And,
+                "or"       => TokenType::Or,
+                "not"      => TokenType::Not,
+                _          => TokenType::Identifier(name)
+            },
+            _ => token.token_type
+        },
+        location: token.location
     }
 }
