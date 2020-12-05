@@ -1,3 +1,5 @@
+use std::fmt::Formatter;
+use std::fmt::Display;
 use std::str::{Chars, Lines};
 use std::iter::Peekable;
 use std::vec::Vec;
@@ -12,12 +14,24 @@ lazy_static!{
     static ref identifier_regex: Regex = Regex::new(r"^[a-zA-Z_]\w*\b").unwrap();
 }
 
-pub struct Token<'a> {
-    token_type: TokenType<'a>,
+pub struct Token {
+    token_type: TokenType,
     location:   Location
 }
 
-pub enum TokenType<'a> {
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match &self.token_type {
+            TokenType::Identifier(name)        => write!(f, "Identifier({}) at {}", name, self.location),
+            TokenType::StringPrimitive(name)   => write!(f, "String({}) at {}", name, self.location),
+            TokenType::NumberPrimitive(number) => write!(f, "Number({}) at {}", number, self.location),
+            token @ _                          => write!(f, "{:?} ", token)
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum TokenType {
     End,                      // r"\bend\b"
     Do,                       // r"\bdo\b"
     While,                    // r"\bwhile\b"
@@ -68,13 +82,19 @@ pub enum TokenType<'a> {
     Comment,                  // r"--(?:(?:\[(=*)\[(?:\w|\s|\d)*\]\1\])|.*)"
     Error,                    // r"\b"
     Identifier(String),      // r"^[a-zA-Z_]\w*\b"
-    StringPrimitive(&'a str), //r"(?:\[(=*)\[((?:.|\s)*)\]\3\])|(?:("|')(.*)\1)"
+    StringPrimitive(String), //r"(?:\[(=*)\[((?:.|\s)*)\]\3\])|(?:("|')(.*)\1)"
     NumberPrimitive(f64)      //r"\d(\d|\.|((e|E)(\+|-)?)|\w)*"
 }
 
 pub struct Location {
     pub line: usize,
     pub col:  usize
+}
+
+impl Display for Location {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "line {}, col {}", self.line, self.col)
+    }
 }
 
 pub struct Tokeniser<'t> {
@@ -85,7 +105,7 @@ pub struct Tokeniser<'t> {
     constructing_token_location: Location
 }
 
-impl Tokeniser<'_> {
+impl<'t> Tokeniser<'t> {
     pub fn new(source: &str) -> Tokeniser {
         let mut lines = source.lines();
 
@@ -101,26 +121,35 @@ impl Tokeniser<'_> {
     pub fn tokenise(&mut self) -> VecDeque<Token> {
         let mut token_deque = VecDeque::<Token>::new();
 
-        while self.has_next_char() {
-            let optional_next_char = self.get_next_char();
-            let matched_token = optional_next_char
-                .map(|next_char| {
-                    self.constructing_token_location = Location { ..self.location };
-                    self.constructing_token.push(next_char);
-                    
-                    match next_char {
-                        '_'                   => self.parse_identifier(),
-                        'A'..='Z' | 'a'..='z' => self.get_error_token(), // maybe an identifier, maybe a keyword
-                        '0'..='9'             => self.get_error_token(), // definitely a number
-                        '\'' | '"'            => self.get_error_token(), // definitely a string
-                        _                     => self.get_error_token(), // maybe a comment, maybe a symbol, maybe a string
-                    }
-                }).map(|token| {
-                    token_deque.push_back(token);
-                });
+        let mut has_next_char = self.has_next_char();
+        while has_next_char {
+            self.constructing_token.clear();
+
+            self.match_start_char().map(|token| {
+                token_deque.push_back(token)
+            });
+
+            has_next_char = self.has_next_char();
         }
 
         return token_deque
+    }
+
+    fn match_start_char(&mut self) -> Option<Token> {
+        self.get_next_char()
+            .as_ref()
+            .map(|next_char| {
+                self.constructing_token_location = Location { ..self.location };
+                self.constructing_token.push(*next_char);
+                
+                match next_char {
+                    '_'                   => self.parse_identifier(),
+                    'A'..='Z' | 'a'..='z' => self.parse_keyword_or_identifier(), // maybe an identifier, maybe a keyword
+                    '0'..='9'             => self.get_error_token(), // definitely a number
+                    '\'' | '"'            => self.get_error_token(), // definitely a string
+                    _                     => self.get_error_token(), // maybe a comment, maybe a symbol, maybe a string
+                }
+            })
     }
 
     pub fn get_next_char(&mut self) -> Option<char> {
@@ -188,7 +217,7 @@ impl Tokeniser<'_> {
                     }
                     _ => true
                 }
-            }).unwrap();
+            }).unwrap_or(true);
 
             if parsed_token {
                 let identifier = self.constructing_token.iter().collect::<String>().clone();
@@ -200,10 +229,59 @@ impl Tokeniser<'_> {
                 self.get_next_char();
             }
         }
+    }
 
-        // self.get_next_char().and_then(|next_char| {
+    fn parse_keyword_or_identifier(&mut self) -> Token {
+        let next_char = self.peek_next_char();
 
-        // }).unwrap_or(self.get_error_token())
+        next_char.map(|c| {
+            match c {
+                'h' if *self.constructing_token.last().unwrap() == 'w' => self.parse_while_keyword(),
+                _ => self.parse_identifier()
+            }
+
+        }).unwrap()
+    }
+
+    fn parse_while_keyword(&mut self) -> Token {
+        loop {
+            let next_char = self.peek_next_char();
+
+            let parsed_token = next_char.and_then(|c| {
+                let last_char = *self.constructing_token.last().unwrap();
+                match c {
+                    'h' if last_char == 'w' => {
+                        self.constructing_token.push(c);
+                        Some(false)
+                    },
+                    'i' if last_char == 'h' => {
+                        self.constructing_token.push(c);
+                        Some(false)
+                    },
+                    'l' if last_char == 'i' => {
+                        self.constructing_token.push(c);
+                        Some(false)
+                    },
+                    'e' if last_char == 'l' => {
+                        self.constructing_token.push(c);
+                        Some(false)
+                    },
+                    _ if last_char == 'e' => Some(true),
+                    _ => None
+                }
+            });
+            
+            if parsed_token.is_some() && parsed_token.unwrap() {
+                return Token {
+                    token_type: TokenType::While,
+                    location:   Location { ..self.constructing_token_location }
+                }
+            } else if parsed_token.is_some() {
+                self.get_next_char();
+            } else {
+                return self.parse_identifier();
+            }
+        }
     }
 
     fn get_error_token(&mut self) -> Token {

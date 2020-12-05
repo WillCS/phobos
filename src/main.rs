@@ -13,5 +13,10 @@ fn main() {
     //     println!("{} at line {}, col {}", tokeniser.get_next_char().unwrap(), tokeniser.location.line, tokeniser.location.col)
     // }
 
+    let tokens = tokeniser.tokenise();
+
+    for token in tokens {
+        println!("{}", token);
+    }
     
 }
