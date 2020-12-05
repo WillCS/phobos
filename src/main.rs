@@ -8,14 +8,14 @@ fn main() {
 
     let mut tokeniser = tokenisation::Tokeniser::new(&contents);
 
-    // println!("{}", tokeniser.has_next_char());
-    // while tokeniser.has_next_char() {
-    //     println!("{} at line {}, col {}", tokeniser.get_next_char().unwrap(), tokeniser.location.line, tokeniser.location.col)
-    // }
-
-    let tokens = tokeniser.tokenise();
-
-    for token in tokens {
-        println!("{}", token);
+    match tokeniser.tokenise() {
+        Ok(tokens) => {
+            for token in tokens {
+                println!("{}", token)
+            }
+        },
+        Err(error) => {
+            println!("{:?}", error)
+        }
     }
 }
