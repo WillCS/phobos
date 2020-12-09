@@ -48,6 +48,8 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
                 return Ok((tokeniser.eof_handler)(self.location));
             }
         }
+
+        let start_location = self.location;
         
         let current_line = self.line_buffer.as_ref().unwrap();
 
@@ -58,11 +60,11 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
             };
 
             if matches {
-                return self.match_lexeme(&lexeme, self.location);
+                return self.match_lexeme(&lexeme, start_location);
             }
         }
 
-        return Ok((tokeniser.eof_handler)(self.location));
+        return Ok((tokeniser.eof_handler)(start_location));
     }
 
     fn match_lexeme(&mut self,
@@ -95,7 +97,7 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
                 self.consume_chars(chars_to_consume);
                 Ok(Token {
                     token_type: (*token_type).clone(),
-                    location:   self.location
+                    location:   start_location
                 })
             },
             LexemeBuilder::DynamicBuilder(builder_fn) => {
