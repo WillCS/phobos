@@ -1,10 +1,16 @@
 use std::fs;
 
 use regex::Regex;
+use lazy_static::lazy_static;
 
 mod tokenisation;
 
 use tokenisation::{TokeniserState, TokeniserBuilder, Tokeniser, TokenType, Token, TokenisationError, Location, TokenisationErrorType};
+
+lazy_static!{
+    pub static ref MULTILINE_START_REGEX:  Regex = Regex::new(r"^\[=*\[").unwrap();
+    pub static ref MULTILINE_FINISH_REGEX: Regex = Regex::new(r"\]=*\]").unwrap();
+}
 
 fn main() {
     let contents = fs::read_to_string("input/test.lua")
@@ -108,11 +114,13 @@ fn main() {
         let mut t = tokeniser.unwrap();
         
         let tokens = t.tokenise(contents);
-
         tokens.map(|list| {
             for token in list {
                 println!("{:?}", token);
             };
+        }).or_else(|err| {
+            println!("{:?}", err);
+            Err(err)
         });
     }
 }
@@ -187,5 +195,38 @@ fn get_eof_token(location: Location) -> Token<TokenType> {
 fn parse_multiline(
     tokeniser_state: &mut TokeniserState<TokenType, TokenisationErrorType>
 ) -> Option<String> {
-        return None
+    let mut line = tokeniser_state.line_buffer.as_ref().expect("Empty Line Buffer").clone();
+    let start_mat = MULTILINE_START_REGEX.find(&line).expect("Failed to match the start of multiline regex");
+    let depth = start_mat.end() - start_mat.start();
+    let mut cols_to_undo = 0;
+
+    let end_mat = loop {
+        let matches = MULTILINE_FINISH_REGEX.find_iter(&line);
+    
+        let end = matches
+            .filter(|mat| (*mat).end() - (*mat).start() == depth)
+            .into_iter()
+            .next();
+
+        if end.is_some() {
+            break end;
+        } else {
+            if tokeniser_state.is_end_of_file() {
+                break None;
+            } else {
+                // let old_len = line.len();
+                tokeniser_state.pop_line();
+                line = tokeniser_state.line_buffer.as_ref().expect("Empty Line Buffer").clone();
+                cols_to_undo = line.len();
+            }
+        }
+    };
+    
+    end_mat.map(|mat| {
+        let value = String::from(&line[depth..mat.start()]);
+        tokeniser_state.consume_chars(mat.end());
+        tokeniser_state.location.col = tokeniser_state.location.col - (cols_to_undo - mat.start());
+
+        value
+    })
 }
