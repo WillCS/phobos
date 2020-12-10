@@ -15,6 +15,7 @@ pub enum TokenisationErrorType {
     UnfinishedLongString,
     UnfinishedLongComment,
     SyntaxError,
+    UnexpectedSymbol,
     Unimplemented
 }
 

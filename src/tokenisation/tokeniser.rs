@@ -72,7 +72,11 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
             }
         }
 
-        return Ok((tokeniser.eof_handler)(start_location));
+        if self.is_end_of_file() {
+            return Ok((tokeniser.eof_handler)(start_location));
+        } else {
+            return Err((tokeniser.unexpected_symbol_handler)(start_location, first_char))
+        }
     }
 
     fn match_lexeme(&mut self,
@@ -168,7 +172,7 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
 
     pub fn consume_chars(&mut self, num_chars: usize) {
         if self.line_buffer.is_some() {
-            let line = self.line_buffer.as_ref().unwrap();
+            let line = self.line_buffer.as_ref().unwrap().clone();
             self.location.col = self.location.col + num_chars;
             self.line_buffer.replace(line[num_chars..].to_string());
         }
@@ -176,23 +180,26 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
 }
 
 pub struct Tokeniser<'t, T, U> where T: Display, T: Clone {
-    lexemes:        Vec<LexemeTokeniser<'t, T, U>>,
-    error_handlers: HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
-    state:          Option<TokeniserState<'t, T, U>>,
-    eof_handler:    &'t dyn Fn(Location) -> Token<T>
+    lexemes:                   Vec<LexemeTokeniser<'t, T, U>>,
+    error_handlers:            HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
+    state:                     Option<TokeniserState<'t, T, U>>,
+    eof_handler:               &'t dyn Fn(Location) -> Token<T>,
+    unexpected_symbol_handler: &'t dyn Fn(Location, char) -> TokenisationError<T, U>
 }
 
 impl<'t, T, U> Tokeniser<'t, T, U> where T: Display, T: Clone {
     pub fn new(
-        lexemes:        Vec<LexemeTokeniser<'t, T, U>>,
-        error_handlers: HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
-        eof_handler:    &'t dyn Fn(Location) -> Token<T>
+        lexemes:                   Vec<LexemeTokeniser<'t, T, U>>,
+        error_handlers:            HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
+        eof_handler:               &'t dyn Fn(Location) -> Token<T>,
+        unexpected_symbol_handler: &'t dyn Fn(Location, char) -> TokenisationError<T, U>
     ) -> Tokeniser<'t, T, U> {
         Tokeniser {
-            lexemes:        lexemes,
-            error_handlers: error_handlers,
-            state:          None,
-            eof_handler:    eof_handler
+            lexemes:                   lexemes,
+            error_handlers:            error_handlers,
+            state:                     None,
+            eof_handler:               eof_handler,
+            unexpected_symbol_handler: unexpected_symbol_handler
         }
     }
 

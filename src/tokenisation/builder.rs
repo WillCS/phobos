@@ -9,17 +9,19 @@ use crate::tokenisation::token::{Token, Location};
 use crate::tokenisation::error::TokenisationError;
 
 pub struct TokeniserBuilder<'t, T, U> where T: Display, T: Clone {
-    lexemes:        Vec<LexemeTokeniser<'t, T, U>>,
-    error_handlers: HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
-    eof_handler:    Option<&'t dyn Fn(Location) -> Token<T>>
+    lexemes:                   Vec<LexemeTokeniser<'t, T, U>>,
+    error_handlers:            HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
+    eof_handler:               Option<&'t dyn Fn(Location) -> Token<T>>,
+    unexpected_symbol_handler: Option<&'t dyn Fn(Location, char) -> TokenisationError<T, U>>
 }
 
 impl<'t, T, U> TokeniserBuilder<'t, T, U> where T: Display, T: Clone {
     pub fn new<'u, V, W>() -> TokeniserBuilder<'u, V, W> where V: Display, V: Clone {
         TokeniserBuilder::<'u, V, W> {
-            lexemes:        Vec::new(),
-            error_handlers: HashMap::new(),
-            eof_handler:    None
+            lexemes:                   Vec::new(),
+            error_handlers:            HashMap::new(),
+            eof_handler:               None,
+            unexpected_symbol_handler: None
         }
     }
 
@@ -70,15 +72,24 @@ impl<'t, T, U> TokeniserBuilder<'t, T, U> where T: Display, T: Clone {
         self.error_handlers.insert(start_char, handler);
         return self;
     }
+
+    pub fn with_unexpected_symbol_handler(mut self,
+        handler: &'t dyn Fn(Location, char) -> TokenisationError<T, U>
+    ) -> TokeniserBuilder<'t, T, U> {
+        self.unexpected_symbol_handler = Some(handler);
+        return self;
+    }
     
     pub fn build(self) -> Option<Tokeniser<'t, T, U>> {
-        if self.eof_handler.is_none() {
-            return None
+        if self.eof_handler.is_some() && self.unexpected_symbol_handler.is_some() {
+            Some(Tokeniser::new(
+                self.lexemes, 
+                self.error_handlers,
+                self.eof_handler.unwrap(),
+                self.unexpected_symbol_handler.unwrap()
+            ))
+        } else {
+            None
         }
-        
-        Some(Tokeniser::new(
-            self.lexemes, 
-            self.error_handlers,
-            self.eof_handler.unwrap()))
     }
 }

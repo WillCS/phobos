@@ -90,9 +90,10 @@ pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, TokenType, TokenisationEr
             &parse_number
         )
         .with_static_token(Regex::new(r"^\.{1}").unwrap(),      TokenType::Dot)
-        .with_error_handler('"', &handle_unfinished_str)
+        .with_error_handler('"',  &handle_unfinished_str)
         .with_error_handler('\'', &handle_unfinished_str)
         .with_eof_handler(&get_eof_token)
+        .with_unexpected_symbol_handler(&get_unexpected_symbol_error)
         .build()
 }
 
@@ -208,5 +209,18 @@ fn handle_unfinished_str(
             location:   location
         },
         error_type: TokenisationErrorType::UnfinishedString
+    }
+}
+
+fn get_unexpected_symbol_error(
+    location: Location,
+    symbol:   char
+) -> TokenisationError<TokenType, TokenisationErrorType> {
+    TokenisationError {
+        partial_token: Token {
+            token_type: TokenType::Error(symbol.to_string()),
+            location:   location
+        },
+        error_type:    TokenisationErrorType::UnexpectedSymbol
     }
 }
