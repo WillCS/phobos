@@ -60,10 +60,6 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
             };
 
             if matches {
-                match &lexeme.matcher {
-                    LexemeMatcher::WholeMatcher(matcher)       => println!("{}", matcher),
-                    LexemeMatcher::StartMatcher(start_matcher) => println!("{}", start_matcher)
-                };
                 return self.match_lexeme(&lexeme, start_location);
             }
         }

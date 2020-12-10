@@ -86,11 +86,12 @@ pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, TokenType, TokenisationEr
         .with_static_token(Regex::new(r"^-").unwrap(),          TokenType::Minus)
         .with_static_token(Regex::new(r"\[").unwrap(),          TokenType::LeftBracket)
         .with_dynamic_token(
-            Regex::new(r"^[0-9]*").unwrap(),
+            Regex::new(r"^\d+").unwrap(),
             &parse_number
         )
         .with_static_token(Regex::new(r"^\.{1}").unwrap(),      TokenType::Dot)
         .with_error_handler('"', &handle_unfinished_str)
+        .with_error_handler('\'', &handle_unfinished_str)
         .with_eof_handler(&get_eof_token)
         .build()
 }
@@ -171,9 +172,7 @@ fn parse_multiline(
     let mut cols_to_undo = line.len();
 
     let end_mat = loop {
-        let matches = MULTILINE_FINISH_REGEX.find_iter(&line);
-    
-        let end = matches
+        let end = MULTILINE_FINISH_REGEX.find_iter(&line)
             .filter(|mat| (*mat).end() - (*mat).start() == depth)
             .into_iter()
             .next();
@@ -181,7 +180,7 @@ fn parse_multiline(
         if end.is_some() {
             break end;
         } else {
-            if tokeniser_state.has_next_line() {
+            if !tokeniser_state.has_next_line() {
                 break None;
             } else {
                 cols_to_undo = line.len();
