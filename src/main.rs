@@ -198,7 +198,7 @@ fn parse_multiline(
     let mut line = tokeniser_state.line_buffer.as_ref().expect("Empty Line Buffer").clone();
     let start_mat = MULTILINE_START_REGEX.find(&line).expect("Failed to match the start of multiline regex");
     let depth = start_mat.end() - start_mat.start();
-    let mut cols_to_undo = 0;
+    let mut cols_to_undo = line.len();
 
     let end_mat = loop {
         let matches = MULTILINE_FINISH_REGEX.find_iter(&line);
@@ -214,10 +214,9 @@ fn parse_multiline(
             if tokeniser_state.is_end_of_file() {
                 break None;
             } else {
-                // let old_len = line.len();
+                cols_to_undo = line.len();
                 tokeniser_state.pop_line();
                 line = tokeniser_state.line_buffer.as_ref().expect("Empty Line Buffer").clone();
-                cols_to_undo = line.len();
             }
         }
     };
@@ -225,8 +224,7 @@ fn parse_multiline(
     end_mat.map(|mat| {
         let value = String::from(&line[depth..mat.start()]);
         tokeniser_state.consume_chars(mat.end());
-        tokeniser_state.location.col = tokeniser_state.location.col - (cols_to_undo - mat.start());
-
+        tokeniser_state.location.col = mat.end() - cols_to_undo + 1;
         value
     })
 }
