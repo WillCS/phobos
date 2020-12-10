@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::str::Lines;
 use std::iter::Peekable;
 use std::vec::Vec;
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashMap};
 
 use regex::Regex;
 
@@ -60,7 +60,19 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
             };
 
             if matches {
+                match &lexeme.matcher {
+                    LexemeMatcher::WholeMatcher(matcher)       => println!("{}", matcher),
+                    LexemeMatcher::StartMatcher(start_matcher) => println!("{}", start_matcher)
+                };
                 return self.match_lexeme(&lexeme, start_location);
+            }
+        }
+
+        let first_char = current_line.chars().next().unwrap();
+
+        for (start_char, handler) in &tokeniser.error_handlers {
+            if first_char == *start_char {
+                return Err(handler(start_location, String::from(current_line.clone())));
             }
         }
 
@@ -169,19 +181,22 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
 
 pub struct Tokeniser<'t, T, U> where T: Display, T: Clone {
     lexemes:        Vec<LexemeTokeniser<'t, T, U>>,
+    error_handlers: HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
     state:          Option<TokeniserState<'t, T, U>>,
     eof_handler:    &'t dyn Fn(Location) -> Token<T>
 }
 
 impl<'t, T, U> Tokeniser<'t, T, U> where T: Display, T: Clone {
     pub fn new(
-        lexemes: Vec<LexemeTokeniser<'t, T, U>>,
-        eof_handler: &'t dyn Fn(Location) -> Token<T>
+        lexemes:        Vec<LexemeTokeniser<'t, T, U>>,
+        error_handlers: HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
+        eof_handler:    &'t dyn Fn(Location) -> Token<T>
     ) -> Tokeniser<'t, T, U> {
         Tokeniser {
-            lexemes:     lexemes,
-            state:       None,
-            eof_handler: eof_handler
+            lexemes:        lexemes,
+            error_handlers: error_handlers,
+            state:          None,
+            eof_handler:    eof_handler
         }
     }
 

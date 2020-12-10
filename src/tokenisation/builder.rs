@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::vec::Vec;
+use std::collections::HashMap;
 use regex::Regex;
 
 
@@ -8,15 +9,17 @@ use crate::tokenisation::token::{Token, Location};
 use crate::tokenisation::error::TokenisationError;
 
 pub struct TokeniserBuilder<'t, T, U> where T: Display, T: Clone {
-    lexemes:     Vec<LexemeTokeniser<'t, T, U>>,
-    eof_handler: Option<&'t dyn Fn(Location) -> Token<T>>
+    lexemes:        Vec<LexemeTokeniser<'t, T, U>>,
+    error_handlers: HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
+    eof_handler:    Option<&'t dyn Fn(Location) -> Token<T>>
 }
 
 impl<'t, T, U> TokeniserBuilder<'t, T, U> where T: Display, T: Clone {
     pub fn new<'u, V, W>() -> TokeniserBuilder<'u, V, W> where V: Display, V: Clone {
         TokeniserBuilder::<'u, V, W> {
-            lexemes:     Vec::new(),
-            eof_handler: None
+            lexemes:        Vec::new(),
+            error_handlers: HashMap::new(),
+            eof_handler:    None
         }
     }
 
@@ -59,12 +62,23 @@ impl<'t, T, U> TokeniserBuilder<'t, T, U> where T: Display, T: Clone {
         self.eof_handler = Some(handler);
         return self;
     }
+
+    pub fn with_error_handler(mut self,
+        start_char: char,
+        handler:    &'t dyn Fn(Location, String) -> TokenisationError<T, U>
+    ) -> TokeniserBuilder<'t, T, U> {
+        self.error_handlers.insert(start_char, handler);
+        return self;
+    }
     
     pub fn build(self) -> Option<Tokeniser<'t, T, U>> {
         if self.eof_handler.is_none() {
             return None
         }
         
-        Some(Tokeniser::new(self.lexemes, self.eof_handler.unwrap()))
+        Some(Tokeniser::new(
+            self.lexemes, 
+            self.error_handlers,
+            self.eof_handler.unwrap()))
     }
 }
