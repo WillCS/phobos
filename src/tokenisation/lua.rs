@@ -34,14 +34,16 @@ pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, TokenType, TokenisationEr
         .with_static_token(Regex::new(r"^and\b").unwrap(),      TokenType::And)
         .with_static_token(Regex::new(r"^or\b").unwrap(),       TokenType::Or)
         .with_static_token(Regex::new(r"^not\b").unwrap(),      TokenType::Not)
+        .with_static_token(Regex::new(r"^goto\b").unwrap(),     TokenType::Goto)
         .with_dynamic_token(
             Regex::new(r"^[a-zA-Z_]\w*").unwrap(),
             &parse_identifier
         )
         .with_static_token(Regex::new(r"^\.{3}").unwrap(),      TokenType::Varargs)
         .with_static_token(Regex::new(r"^\.{2}").unwrap(),      TokenType::Concat)
-        .with_static_token(Regex::new(r"^={1}").unwrap(),       TokenType::Equals)
-        .with_static_token(Regex::new(r"^={2}").unwrap(),       TokenType::DoubleEquals)
+        .with_static_token(Regex::new(r"^==").unwrap(),         TokenType::DoubleEquals)
+        .with_static_token(Regex::new(r"^=").unwrap(),          TokenType::Equals)
+        .with_static_token(Regex::new(r"^::").unwrap(),         TokenType::DoubleColon)
         .with_static_token(Regex::new(r"^:").unwrap(),          TokenType::Colon)
         .with_static_token(Regex::new(r"^,").unwrap(),          TokenType::Comma)
         .with_static_token(Regex::new(r"^\]").unwrap(),         TokenType::RightBracket)
@@ -57,6 +59,7 @@ pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, TokenType, TokenisationEr
         .with_static_token(Regex::new(r"^;").unwrap(),          TokenType::Semicolon)
         .with_static_token(Regex::new(r"^\+").unwrap(),         TokenType::Plus)
         .with_static_token(Regex::new(r"^\*").unwrap(),         TokenType::Multiply)
+        .with_static_token(Regex::new(r"^//").unwrap(),         TokenType::FloorDivide)
         .with_static_token(Regex::new(r"^/").unwrap(),          TokenType::Divide)
         .with_static_token(Regex::new(r"^\^").unwrap(),         TokenType::Power)
         .with_static_token(Regex::new(r"^%").unwrap(),          TokenType::Modulo)

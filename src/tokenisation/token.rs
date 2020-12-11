@@ -15,64 +15,67 @@ impl<T: Display> Display for Token<T> {
 
 #[derive(Debug, Clone)]
 pub enum TokenType {
-    End,                   // r"\bend\b"
-    Do,                    // r"\bdo\b"
-    While,                 // r"\bwhile\b"
-    Repeat,                // r"\brepeat\b"
-    Until,                 // r"\buntil\b"
-    If,                    // r"\bif\b"
-    In,                    // r"\bin\b"
-    Then,                  // r"\bthen\b"
-    Elseif,                // r"\belseif\b"
-    Else,                  // r"\belse\b"
-    For,                   // r"\bfor\b"
-    Function,              // r"\bfunction\b"
-    Local,                 // r"\blocal\b"
-    Return,                // r"\breturn\b"
-    Break,                 // r"\bbreak\b"
-    True,                  // r"\btrue\b"
-    False,                 // r"\bfalse\b"
-    Nil,                   // r"\bnil\b"
-    And,                   // r"\band\b"
-    Or,                    // r"\bor\b"
-    Not,                   // r"\bnot\b"
-    Equals,                // r"={1,2}|>=|<=|~="
-    DoubleEquals,          // r"={1,2}|>=|<=|~="
-    Dot,                   // r"\.{1}
-    Colon,                 // r":"
-    Comma,                 // r","
-    LeftBracket,           // r"\["
-    RightBracket,          // r"\]"
-    LeftParenthesis,       // r"\("
-    RightParenthesis,      // r"\)"
-    LeftBrace,             // r"{"
-    RightBrace,            // r"}"
-    LeftShift,             // r"<<"
-    RightShift,            // r">>"
-    BitwiseAnd,            // r"&"
-    BitwiseOr,             // r"\|"
-    BitwiseNeg,            // r"~"
-    Varargs,               // r"\.{3}"
-    Semicolon,             // r";"
-    Plus,                  // r"\+"
-    Minus,                 // r"-"
-    Multiply,              // r"\*"
-    Divide,                // r"\/"
-    Power,                 // r"\^"
-    Modulo,                // r"%"
-    Concat,                // r"\.{2}"
-    LessThan,              // r"<"
-    LessEq,                // r"={1,2}|>=|<=|~="
-    GreaterThan,           // r">"
-    GreaterEq,             // r"={1,2}|>=|<=|~="
-    NotEq,                 // r"={1,2}|>=|<=|~="
-    Length,                // r"#"
-    Comment,               // r"--(?:(?:\[(=*)\[(?:\w|\s|\d)*\]\1\])|.*)"
+    End,
+    Do,
+    While,
+    Repeat,
+    Until,
+    If,
+    In,
+    Then,
+    Elseif,
+    Else,
+    For,
+    Function,
+    Local,
+    Return,
+    Break,
+    True,
+    False,
+    Nil,
+    And,
+    Or,
+    Not,
+    Goto,
+    Equals,
+    DoubleEquals,
+    Dot,
+    Colon,
+    DoubleColon,
+    Comma,
+    LeftBracket,
+    RightBracket,
+    LeftParenthesis,
+    RightParenthesis,
+    LeftBrace,
+    RightBrace,
+    LeftShift,
+    RightShift,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseNeg,
+    Varargs,
+    Semicolon,
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    FloorDivide,
+    Power,
+    Modulo,
+    Concat,
+    LessThan,
+    LessEq,
+    GreaterThan,
+    GreaterEq,
+    NotEq,
+    Length,
+    Comment,
     EndOfFile,
-    Error(String),         // r"\b"
-    Identifier(String),    // r"^[a-zA-Z_]\w*\b"
-    StringLiteral(String), // r"(?:\[(=*)\[((?:.|\s)*)\]\3\])|(?:("|')(.*)\1)"
-    NumberLiteral(f64)     // r"\d(\d|\.|((e|E)(\+|-)?)|\w)*"
+    Error(String),
+    Identifier(String),
+    StringLiteral(String),
+    NumberLiteral(f64)
 }
 
 impl Display for TokenType {
