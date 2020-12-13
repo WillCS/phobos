@@ -1,8 +1,10 @@
+use std::fmt::{Display, Formatter};
+
 use regex::Regex;
 use lazy_static::lazy_static;
 
 use crate::tokenisation::tokeniser::{Tokeniser, TokeniserState};
-use crate::tokenisation::token::{Token, TokenType, Location};
+use crate::tokenisation::token::{Token, Location};
 use crate::tokenisation::builder::{TokeniserBuilder};
 use crate::tokenisation::error::{TokenisationError, TokenisationErrorType};
 
@@ -11,64 +13,140 @@ lazy_static!{
     pub static ref MULTILINE_FINISH_REGEX: Regex = Regex::new(r"\]=*\]").unwrap();
 }
 
-pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, TokenType, TokenisationErrorType>> {
-    TokeniserBuilder::<TokenType, TokenisationErrorType>::new()
-        .with_static_token(Regex::new(r"^end\b").unwrap(),      TokenType::End)
-        .with_static_token(Regex::new(r"^do\b").unwrap(),       TokenType::Do)
-        .with_static_token(Regex::new(r"^while\b").unwrap(),    TokenType::While)
-        .with_static_token(Regex::new(r"^repeat\b").unwrap(),   TokenType::Repeat)
-        .with_static_token(Regex::new(r"^until\b").unwrap(),    TokenType::Until)
-        .with_static_token(Regex::new(r"^if\b").unwrap(),       TokenType::If)
-        .with_static_token(Regex::new(r"^in\b").unwrap(),       TokenType::In)
-        .with_static_token(Regex::new(r"^then\b").unwrap(),     TokenType::Then)
-        .with_static_token(Regex::new(r"^elseif\b").unwrap(),   TokenType::Elseif)
-        .with_static_token(Regex::new(r"^else\b").unwrap(),     TokenType::Else)
-        .with_static_token(Regex::new(r"^for\b").unwrap(),      TokenType::For)
-        .with_static_token(Regex::new(r"^function\b").unwrap(), TokenType::Function)
-        .with_static_token(Regex::new(r"^local\b").unwrap(),    TokenType::Local)
-        .with_static_token(Regex::new(r"^return\b").unwrap(),   TokenType::Return)
-        .with_static_token(Regex::new(r"^break\b").unwrap(),    TokenType::Break)
-        .with_static_token(Regex::new(r"^true\b").unwrap(),     TokenType::True)
-        .with_static_token(Regex::new(r"^false\b").unwrap(),    TokenType::False)
-        .with_static_token(Regex::new(r"^nil\b").unwrap(),      TokenType::Nil)
-        .with_static_token(Regex::new(r"^and\b").unwrap(),      TokenType::And)
-        .with_static_token(Regex::new(r"^or\b").unwrap(),       TokenType::Or)
-        .with_static_token(Regex::new(r"^not\b").unwrap(),      TokenType::Not)
-        .with_static_token(Regex::new(r"^goto\b").unwrap(),     TokenType::Goto)
+#[derive(Debug, Clone)]
+pub enum LuaToken {
+    End,
+    Do,
+    While,
+    Repeat,
+    Until,
+    If,
+    In,
+    Then,
+    Elseif,
+    Else,
+    For,
+    Function,
+    Local,
+    Return,
+    Break,
+    True,
+    False,
+    Nil,
+    And,
+    Or,
+    Not,
+    Goto,
+    Equals,
+    DoubleEquals,
+    Dot,
+    Colon,
+    DoubleColon,
+    Comma,
+    LeftBracket,
+    RightBracket,
+    LeftParenthesis,
+    RightParenthesis,
+    LeftBrace,
+    RightBrace,
+    LeftShift,
+    RightShift,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseNeg,
+    Varargs,
+    Semicolon,
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    FloorDivide,
+    Power,
+    Modulo,
+    Concat,
+    LessThan,
+    LessEq,
+    GreaterThan,
+    GreaterEq,
+    NotEq,
+    Length,
+    Comment,
+    EndOfFile,
+    Error(String),
+    Identifier(String),
+    StringLiteral(String),
+    NumberLiteral(f64)
+}
+
+impl Display for LuaToken {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            LuaToken::Identifier(name)     => write!(f, "{}", name),
+            LuaToken::StringLiteral(value) => write!(f, "'{}'", value),
+            LuaToken::NumberLiteral(value) => write!(f, "'{}'", value),
+            _                              => write!(f, "{:?}", self)
+        }
+    }
+}
+
+pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, LuaToken, TokenisationErrorType>> {
+    TokeniserBuilder::<LuaToken, TokenisationErrorType>::new()
+        .with_static_token(Regex::new(r"^end\b").unwrap(),      LuaToken::End)
+        .with_static_token(Regex::new(r"^do\b").unwrap(),       LuaToken::Do)
+        .with_static_token(Regex::new(r"^while\b").unwrap(),    LuaToken::While)
+        .with_static_token(Regex::new(r"^repeat\b").unwrap(),   LuaToken::Repeat)
+        .with_static_token(Regex::new(r"^until\b").unwrap(),    LuaToken::Until)
+        .with_static_token(Regex::new(r"^if\b").unwrap(),       LuaToken::If)
+        .with_static_token(Regex::new(r"^in\b").unwrap(),       LuaToken::In)
+        .with_static_token(Regex::new(r"^then\b").unwrap(),     LuaToken::Then)
+        .with_static_token(Regex::new(r"^elseif\b").unwrap(),   LuaToken::Elseif)
+        .with_static_token(Regex::new(r"^else\b").unwrap(),     LuaToken::Else)
+        .with_static_token(Regex::new(r"^for\b").unwrap(),      LuaToken::For)
+        .with_static_token(Regex::new(r"^function\b").unwrap(), LuaToken::Function)
+        .with_static_token(Regex::new(r"^local\b").unwrap(),    LuaToken::Local)
+        .with_static_token(Regex::new(r"^return\b").unwrap(),   LuaToken::Return)
+        .with_static_token(Regex::new(r"^break\b").unwrap(),    LuaToken::Break)
+        .with_static_token(Regex::new(r"^true\b").unwrap(),     LuaToken::True)
+        .with_static_token(Regex::new(r"^false\b").unwrap(),    LuaToken::False)
+        .with_static_token(Regex::new(r"^nil\b").unwrap(),      LuaToken::Nil)
+        .with_static_token(Regex::new(r"^and\b").unwrap(),      LuaToken::And)
+        .with_static_token(Regex::new(r"^or\b").unwrap(),       LuaToken::Or)
+        .with_static_token(Regex::new(r"^not\b").unwrap(),      LuaToken::Not)
+        .with_static_token(Regex::new(r"^goto\b").unwrap(),     LuaToken::Goto)
         .with_dynamic_token(
             Regex::new(r"^[a-zA-Z_]\w*").unwrap(),
             &parse_identifier
         )
-        .with_static_token(Regex::new(r"^\.{3}").unwrap(),      TokenType::Varargs)
-        .with_static_token(Regex::new(r"^\.{2}").unwrap(),      TokenType::Concat)
-        .with_static_token(Regex::new(r"^==").unwrap(),         TokenType::DoubleEquals)
-        .with_static_token(Regex::new(r"^=").unwrap(),          TokenType::Equals)
-        .with_static_token(Regex::new(r"^::").unwrap(),         TokenType::DoubleColon)
-        .with_static_token(Regex::new(r"^:").unwrap(),          TokenType::Colon)
-        .with_static_token(Regex::new(r"^,").unwrap(),          TokenType::Comma)
-        .with_static_token(Regex::new(r"^\]").unwrap(),         TokenType::RightBracket)
-        .with_static_token(Regex::new(r"^\(").unwrap(),         TokenType::LeftParenthesis)
-        .with_static_token(Regex::new(r"^\)").unwrap(),         TokenType::RightParenthesis)
-        .with_static_token(Regex::new(r"^\{").unwrap(),         TokenType::LeftBrace)
-        .with_static_token(Regex::new(r"^\}").unwrap(),         TokenType::RightBrace)
-        .with_static_token(Regex::new(r"^<<").unwrap(),         TokenType::LeftShift)
-        .with_static_token(Regex::new(r"^>>").unwrap(),         TokenType::RightShift)
-        .with_static_token(Regex::new(r"^&").unwrap(),          TokenType::BitwiseAnd)
-        .with_static_token(Regex::new(r"^\|").unwrap(),         TokenType::BitwiseOr)
-        .with_static_token(Regex::new(r"^~").unwrap(),          TokenType::BitwiseNeg)
-        .with_static_token(Regex::new(r"^;").unwrap(),          TokenType::Semicolon)
-        .with_static_token(Regex::new(r"^\+").unwrap(),         TokenType::Plus)
-        .with_static_token(Regex::new(r"^\*").unwrap(),         TokenType::Multiply)
-        .with_static_token(Regex::new(r"^//").unwrap(),         TokenType::FloorDivide)
-        .with_static_token(Regex::new(r"^/").unwrap(),          TokenType::Divide)
-        .with_static_token(Regex::new(r"^\^").unwrap(),         TokenType::Power)
-        .with_static_token(Regex::new(r"^%").unwrap(),          TokenType::Modulo)
-        .with_static_token(Regex::new(r"^<=").unwrap(),         TokenType::LessEq)
-        .with_static_token(Regex::new(r"^<").unwrap(),          TokenType::LessThan)
-        .with_static_token(Regex::new(r"^>=").unwrap(),         TokenType::GreaterEq)
-        .with_static_token(Regex::new(r"^>").unwrap(),          TokenType::GreaterThan)
-        .with_static_token(Regex::new(r"^~=").unwrap(),         TokenType::NotEq)
-        .with_static_token(Regex::new(r"^#").unwrap(),          TokenType::Length)
+        .with_static_token(Regex::new(r"^\.{3}").unwrap(),      LuaToken::Varargs)
+        .with_static_token(Regex::new(r"^\.{2}").unwrap(),      LuaToken::Concat)
+        .with_static_token(Regex::new(r"^==").unwrap(),         LuaToken::DoubleEquals)
+        .with_static_token(Regex::new(r"^=").unwrap(),          LuaToken::Equals)
+        .with_static_token(Regex::new(r"^::").unwrap(),         LuaToken::DoubleColon)
+        .with_static_token(Regex::new(r"^:").unwrap(),          LuaToken::Colon)
+        .with_static_token(Regex::new(r"^,").unwrap(),          LuaToken::Comma)
+        .with_static_token(Regex::new(r"^\]").unwrap(),         LuaToken::RightBracket)
+        .with_static_token(Regex::new(r"^\(").unwrap(),         LuaToken::LeftParenthesis)
+        .with_static_token(Regex::new(r"^\)").unwrap(),         LuaToken::RightParenthesis)
+        .with_static_token(Regex::new(r"^\{").unwrap(),         LuaToken::LeftBrace)
+        .with_static_token(Regex::new(r"^\}").unwrap(),         LuaToken::RightBrace)
+        .with_static_token(Regex::new(r"^<<").unwrap(),         LuaToken::LeftShift)
+        .with_static_token(Regex::new(r"^>>").unwrap(),         LuaToken::RightShift)
+        .with_static_token(Regex::new(r"^&").unwrap(),          LuaToken::BitwiseAnd)
+        .with_static_token(Regex::new(r"^\|").unwrap(),         LuaToken::BitwiseOr)
+        .with_static_token(Regex::new(r"^~").unwrap(),          LuaToken::BitwiseNeg)
+        .with_static_token(Regex::new(r"^;").unwrap(),          LuaToken::Semicolon)
+        .with_static_token(Regex::new(r"^\+").unwrap(),         LuaToken::Plus)
+        .with_static_token(Regex::new(r"^\*").unwrap(),         LuaToken::Multiply)
+        .with_static_token(Regex::new(r"^//").unwrap(),         LuaToken::FloorDivide)
+        .with_static_token(Regex::new(r"^/").unwrap(),          LuaToken::Divide)
+        .with_static_token(Regex::new(r"^\^").unwrap(),         LuaToken::Power)
+        .with_static_token(Regex::new(r"^%").unwrap(),          LuaToken::Modulo)
+        .with_static_token(Regex::new(r"^<=").unwrap(),         LuaToken::LessEq)
+        .with_static_token(Regex::new(r"^<").unwrap(),          LuaToken::LessThan)
+        .with_static_token(Regex::new(r"^>=").unwrap(),         LuaToken::GreaterEq)
+        .with_static_token(Regex::new(r"^>").unwrap(),          LuaToken::GreaterThan)
+        .with_static_token(Regex::new(r"^~=").unwrap(),         LuaToken::NotEq)
+        .with_static_token(Regex::new(r"^#").unwrap(),          LuaToken::Length)
         .with_dynamic_token(
             Regex::new("^\"((\")|.)+?[^\\\\]\"").unwrap(),
             &parse_string
@@ -85,14 +163,14 @@ pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, TokenType, TokenisationEr
             Regex::new(r"^-{2}\[=*\[").unwrap(),
             &parse_multiline_comment
         )
-        .with_static_token(Regex::new(r"^-{2}.*").unwrap(),     TokenType::Comment)
-        .with_static_token(Regex::new(r"^-").unwrap(),          TokenType::Minus)
-        .with_static_token(Regex::new(r"\[").unwrap(),          TokenType::LeftBracket)
+        .with_static_token(Regex::new(r"^-{2}.*").unwrap(),     LuaToken::Comment)
+        .with_static_token(Regex::new(r"^-").unwrap(),          LuaToken::Minus)
+        .with_static_token(Regex::new(r"\[").unwrap(),          LuaToken::LeftBracket)
         .with_dynamic_token(
             Regex::new(r"^\d+").unwrap(),
             &parse_number
         )
-        .with_static_token(Regex::new(r"^\.{1}").unwrap(),      TokenType::Dot)
+        .with_static_token(Regex::new(r"^\.{1}").unwrap(),      LuaToken::Dot)
         .with_error_handler('"',  &handle_unfinished_str)
         .with_error_handler('\'', &handle_unfinished_str)
         .with_eof_handler(&get_eof_token)
@@ -100,16 +178,17 @@ pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, TokenType, TokenisationEr
         .build()
 }
 
-fn parse_number(value: String, location: Location) -> Result<Token<TokenType>, TokenisationError<TokenType, TokenisationErrorType>> {
+fn parse_number(value: String, location: Location) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
     Ok(Token {
-        token_type: TokenType::NumberLiteral(1.0),
+        token_type: LuaToken::NumberLiteral(1.0),
         location:   location
     })
 }
 
-fn parse_string(value: String, location: Location) -> Result<Token<TokenType>, TokenisationError<TokenType, TokenisationErrorType>> {
+fn parse_string(value: String, location: Location) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
+    let len = value.len() - 1;
     Ok(Token {
-        token_type: TokenType::StringLiteral(value),
+        token_type: LuaToken::StringLiteral(String::from(&value[1..len])),
         location:   location
     })
 }
@@ -117,20 +196,20 @@ fn parse_string(value: String, location: Location) -> Result<Token<TokenType>, T
 fn parse_identifier(
     value:    String,
     location: Location
-) -> Result<Token<TokenType>, TokenisationError<TokenType, TokenisationErrorType>> {
+) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
     Ok(Token {
-        token_type: TokenType::Identifier(value),
+        token_type: LuaToken::Identifier(value),
         location:   location
     })
 }
 
 fn parse_multiline_string(
-    state:    &mut TokeniserState<TokenType, TokenisationErrorType>,
+    state:    &mut TokeniserState<LuaToken, TokenisationErrorType>,
     location: Location
-) -> Result<Token<TokenType>, TokenisationError<TokenType, TokenisationErrorType>> {
+) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
     parse_multiline(state).map(|parsed_str| {
         Token {
-            token_type: TokenType::StringLiteral(parsed_str),
+            token_type: LuaToken::StringLiteral(parsed_str),
             location:   location
         }
     }).ok_or(
@@ -142,14 +221,14 @@ fn parse_multiline_string(
 }
 
 fn parse_multiline_comment(
-    state:    &mut TokeniserState<TokenType, TokenisationErrorType>,
+    state:    &mut TokeniserState<LuaToken, TokenisationErrorType>,
     location: Location
-) -> Result<Token<TokenType>, TokenisationError<TokenType, TokenisationErrorType>> {
+) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
     state.consume_chars(2);
     
     parse_multiline(state).map(|_| {
         Token {
-            token_type: TokenType::Comment,
+            token_type: LuaToken::Comment,
             location:   location
         }
     }).ok_or(
@@ -160,15 +239,15 @@ fn parse_multiline_comment(
     )
 }
 
-fn get_eof_token(location: Location) -> Token<TokenType> {
+fn get_eof_token(location: Location) -> Token<LuaToken> {
     Token {
-        token_type: TokenType::EndOfFile,
+        token_type: LuaToken::EndOfFile,
         location:   location
     }
 }
 
 fn parse_multiline(
-    tokeniser_state: &mut TokeniserState<TokenType, TokenisationErrorType>
+    tokeniser_state: &mut TokeniserState<LuaToken, TokenisationErrorType>
 ) -> Option<String> {
     let mut line = tokeniser_state.line_buffer.as_ref().expect("Empty Line Buffer").clone();
     let start_mat = MULTILINE_START_REGEX.find(&line).expect("Failed to match the start of multiline regex");
@@ -205,10 +284,10 @@ fn parse_multiline(
 fn handle_unfinished_str(
     location: Location,
     line:     String
-) -> TokenisationError<TokenType, TokenisationErrorType> {
+) -> TokenisationError<LuaToken, TokenisationErrorType> {
     TokenisationError {
         partial_token: Token {
-            token_type: TokenType::StringLiteral(line),
+            token_type: LuaToken::StringLiteral(line),
             location:   location
         },
         error_type: TokenisationErrorType::UnfinishedString
@@ -218,10 +297,10 @@ fn handle_unfinished_str(
 fn get_unexpected_symbol_error(
     location: Location,
     symbol:   char
-) -> TokenisationError<TokenType, TokenisationErrorType> {
+) -> TokenisationError<LuaToken, TokenisationErrorType> {
     TokenisationError {
         partial_token: Token {
-            token_type: TokenType::Error(symbol.to_string()),
+            token_type: LuaToken::Error(symbol.to_string()),
             location:   location
         },
         error_type:    TokenisationErrorType::UnexpectedSymbol

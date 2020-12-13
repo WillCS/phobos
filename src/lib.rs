@@ -1,3 +1,9 @@
+mod tokenisation;
+mod parsing;
+mod syntax_tree;
+
+pub use tokenisation::get_lua_tokeniser;
+
 pub fn test_fn() -> bool {
     true
 }

@@ -182,7 +182,6 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
 pub struct Tokeniser<'t, T, U> where T: Display, T: Clone {
     lexemes:                   Vec<LexemeTokeniser<'t, T, U>>,
     error_handlers:            HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
-    state:                     Option<TokeniserState<'t, T, U>>,
     eof_handler:               &'t dyn Fn(Location) -> Token<T>,
     unexpected_symbol_handler: &'t dyn Fn(Location, char) -> TokenisationError<T, U>
 }
@@ -197,7 +196,6 @@ impl<'t, T, U> Tokeniser<'t, T, U> where T: Display, T: Clone {
         Tokeniser {
             lexemes:                   lexemes,
             error_handlers:            error_handlers,
-            state:                     None,
             eof_handler:               eof_handler,
             unexpected_symbol_handler: unexpected_symbol_handler
         }

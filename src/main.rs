@@ -1,12 +1,11 @@
 use std::fs;
-
-mod tokenisation;
+use phobos::get_lua_tokeniser;
 
 fn main() {
     let contents = fs::read_to_string("input/test.lua")
         .expect("Something bad happened");
 
-    let tokeniser = tokenisation::get_lua_tokeniser();
+    let tokeniser = get_lua_tokeniser();
     if tokeniser.is_some() {
         let mut t = tokeniser.unwrap();
         
