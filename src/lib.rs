@@ -1,6 +1,6 @@
 mod tokenisation;
 mod parsing;
-mod syntax_tree;
+mod lua;
 
 pub use tokenisation::get_lua_tokeniser;
 
