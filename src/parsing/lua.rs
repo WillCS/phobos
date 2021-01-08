@@ -19,11 +19,19 @@ pub fn get_lua_parser() {
             ),
             SymbolSequence::maybe(
                 SymbolSequence::Sequence(vec![
-                    SymbolSequence::from(Symbol::Terminal(LuaToken::Else)),
-                    SymbolSequence::from(Symbol::Nonterminal(LuaToken::Varargs)),
+                    SymbolSequence::from_terminal(LuaToken::Else),
+                    SymbolSequence::from_terminal(LuaToken::Varargs),
                 ])
             ),
             SymbolSequence::from_nonterminal(LuaToken::End)
         ]))
         .build();
+}
+
+macro_rules! seq {
+    ($($sym:expr),+) => {
+        SymbolSequence::Sequence(vec![$(
+            SymbolSequence::from_terminal($sym)
+        )+])
+    };
 }

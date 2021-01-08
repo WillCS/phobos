@@ -1,3 +1,5 @@
+use std::fmt::Formatter;
+use std::fmt::Display;
 use std::collections::HashSet;
 
 use crate::parsing::symbol::{Symbol, SymbolSequence};
@@ -26,6 +28,16 @@ impl<'t, T, U> Production<'t, T, U> {
             consumed_symbols,
             lookahead_set,
             reduce_handler
+        }
+    }
+}
+
+impl<'t, T, U> Display for Production<'t, T, U> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        if self.lookahead_set.is_empty() {
+            write!(f, "{} ::= {}", self.produced_symbol, self.consumed_symbols)
+        } else {
+            write!(f, "{} ::= {}, {}", self.produced_symbol, self.consumed_symbols, self.lookahead_set)
         }
     }
 }
