@@ -4,7 +4,7 @@ use regex::Regex;
 use lazy_static::lazy_static;
 
 use crate::tokenisation::tokeniser::{Tokeniser, TokeniserState};
-use crate::tokenisation::token::{Token, Location};
+use crate::tokenisation::token::{Token, TokenData, Location};
 use crate::tokenisation::builder::{TokeniserBuilder};
 use crate::tokenisation::error::{TokenisationError, TokenisationErrorType};
 use crate::parsing::{TerminalSymbol, NonterminalSymbol};
@@ -12,6 +12,28 @@ use crate::parsing::{TerminalSymbol, NonterminalSymbol};
 lazy_static!{
     pub static ref MULTILINE_START_REGEX:  Regex = Regex::new(r"^\[=*\[").unwrap();
     pub static ref MULTILINE_FINISH_REGEX: Regex = Regex::new(r"\]=*\]").unwrap();
+}
+
+pub enum LuaTokenData {
+    Error(String),
+    Identifier(String),
+    NumberLiteral(f64),
+    StringLiteral(String)
+}
+
+impl TokenData for LuaTokenData {
+    
+}
+
+impl Display for LuaTokenData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            LuaTokenData::Error(val)           => write!(f, "{}",   val),
+            LuaTokenData::Identifier(name)     => write!(f, "{}",   name),
+            LuaTokenData::StringLiteral(value) => write!(f, "'{}'", value),
+            LuaTokenData::NumberLiteral(value) => write!(f, "'{}'", value),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -73,13 +95,15 @@ pub enum LuaToken {
     Length,
     Comment,
     EndOfFile,
-    Error(String),
-    Identifier(String),
-    StringLiteral(String),
-    NumberLiteral(f64)
+    Error,
+    Identifier,
+    StringLiteral,
+    NumberLiteral
 }
 
 impl TerminalSymbol for LuaToken {
+    type DataType = LuaTokenData;
+
     fn get_name(&self) -> &'static str {
         match self {
             LuaToken::End              => "end",
@@ -139,26 +163,20 @@ impl TerminalSymbol for LuaToken {
             LuaToken::Length           => "`#`",
             LuaToken::Comment          => "Comment",
             LuaToken::EndOfFile        => "<eof>",
-            LuaToken::Error(_)         => "Error",
-            LuaToken::Identifier(_)    => "Name",
-            LuaToken::StringLiteral(_) => "LiteralString",
-            LuaToken::NumberLiteral(_) => "Numeral"
+            LuaToken::Error            => "Error",
+            LuaToken::Identifier       => "Name",
+            LuaToken::StringLiteral    => "LiteralString",
+            LuaToken::NumberLiteral    => "Numeral"
         }
-    }
-}
-
-impl NonterminalSymbol for LuaToken {
-    fn get_name(&self) -> &'static str {
-        <LuaToken as TerminalSymbol>::get_name(self)
     }
 }
 
 impl Display for LuaToken {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
-            LuaToken::Identifier(name)     => write!(f, "{}", name),
-            LuaToken::StringLiteral(value) => write!(f, "'{}'", value),
-            LuaToken::NumberLiteral(value) => write!(f, "'{}'", value),
+            // LuaToken::Identifier(name)     => write!(f, "{}", name),
+            // LuaToken::StringLiteral(value) => write!(f, "'{}'", value),
+            // LuaToken::NumberLiteral(value) => write!(f, "'{}'", value),
             _                              => write!(f, "{:?}", self)
         }
     }
@@ -255,7 +273,8 @@ pub fn get_lua_tokeniser<'t>() -> Option<Tokeniser<'t, LuaToken, TokenisationErr
 
 fn parse_number(value: String, location: Location) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
     Ok(Token {
-        token_type: LuaToken::NumberLiteral(1.0),
+        token_type: LuaToken::NumberLiteral,
+        token_data: Some(LuaTokenData::NumberLiteral(1.0)),
         location:   location
     })
 }
@@ -263,7 +282,8 @@ fn parse_number(value: String, location: Location) -> Result<Token<LuaToken>, To
 fn parse_string(value: String, location: Location) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
     let len = value.len() - 1;
     Ok(Token {
-        token_type: LuaToken::StringLiteral(String::from(&value[1..len])),
+        token_type: LuaToken::StringLiteral,
+        token_data: Some(LuaTokenData::StringLiteral(String::from(&value[1..len]))),
         location:   location
     })
 }
@@ -273,7 +293,8 @@ fn parse_identifier(
     location: Location
 ) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
     Ok(Token {
-        token_type: LuaToken::Identifier(value),
+        token_type: LuaToken::Identifier,
+        token_data: Some(LuaTokenData::Identifier(value)),
         location:   location
     })
 }
@@ -285,7 +306,8 @@ fn parse_multiline_string(
     parse_multiline(state)
         .map(|parsed_str| {
             Token {
-                token_type: LuaToken::StringLiteral(parsed_str),
+                token_type: LuaToken::StringLiteral,
+                token_data: Some(LuaTokenData::StringLiteral(parsed_str)),
                 location:   location
             }
         })
@@ -307,6 +329,7 @@ fn parse_multiline_comment(
         .map(|_| {
             Token {
                 token_type: LuaToken::Comment,
+                token_data: None,
                 location:   location
             }
         })
@@ -321,6 +344,7 @@ fn parse_multiline_comment(
 fn get_eof_token(location: Location) -> Token<LuaToken> {
     Token {
         token_type: LuaToken::EndOfFile,
+        token_data: None,
         location:   location
     }
 }
@@ -366,7 +390,8 @@ fn handle_unfinished_str(
 ) -> TokenisationError<LuaToken, TokenisationErrorType> {
     TokenisationError {
         partial_token: Token {
-            token_type: LuaToken::StringLiteral(line),
+            token_type: LuaToken::StringLiteral,
+            token_data: Some(LuaTokenData::Error(line)),
             location:   location
         },
         error_type: TokenisationErrorType::UnfinishedString
@@ -379,7 +404,8 @@ fn get_unexpected_symbol_error(
 ) -> TokenisationError<LuaToken, TokenisationErrorType> {
     TokenisationError {
         partial_token: Token {
-            token_type: LuaToken::Error(symbol.to_string()),
+            token_type: LuaToken::Error,
+            token_data: Some(LuaTokenData::Error(symbol.to_string())),
             location:   location
         },
         error_type:    TokenisationErrorType::UnexpectedSymbol

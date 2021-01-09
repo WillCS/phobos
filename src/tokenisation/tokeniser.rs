@@ -109,6 +109,7 @@ impl<T, U> TokeniserState<'_, T, U> where T: TerminalSymbol {
                 self.consume_chars(chars_to_consume);
                 Ok(Token {
                     token_type: (*token_type).clone(),
+                    token_data: None,
                     location:   start_location
                 })
             },

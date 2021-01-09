@@ -1,10 +1,16 @@
+use std::fmt::{Display, Formatter};
 use crate::tokenisation::token::Token;
 use crate::parsing::TerminalSymbol;
 
-#[derive(Debug)]
 pub struct TokenisationError<T, U> where T: TerminalSymbol {
     pub partial_token: Token<T>,
     pub error_type:    U
+}
+
+impl<T, U> Display for TokenisationError<T, U> where T: TerminalSymbol {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self.partial_token)
+    }
 }
 
 #[derive(Debug)]

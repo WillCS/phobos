@@ -14,7 +14,7 @@ pub enum Symbol<T, U> where T: TerminalSymbol, U: NonterminalSymbol {
 impl<T, U> Display for Symbol<T, U> where T: TerminalSymbol, U: NonterminalSymbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
-            Symbol::Terminal(s)    => write!(f, "T({})", s.get_name()),
+            Symbol::Terminal(s)    => write!(f, "{}", s.get_name()),
             Symbol::Nonterminal(s) => write!(f, "{}", s.get_name())
         }
     }
@@ -75,7 +75,7 @@ impl<T, U> Display for SymbolSequence<T, U> where T: TerminalSymbol, U: Nontermi
                 for symbol in v {
                     write!(output, "{}", symbol).unwrap();
                     if i != v.len() {
-                        write!(output, ", ").unwrap();
+                        write!(output, " ").unwrap();
                     }
 
                     i += 1;
