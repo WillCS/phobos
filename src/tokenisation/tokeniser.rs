@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use std::fmt::Display;
 use std::str::Lines;
 use std::iter::Peekable;
 use std::vec::Vec;
@@ -9,24 +8,25 @@ use regex::Regex;
 
 use crate::tokenisation::token::{Token, Location};
 use crate::tokenisation::error::TokenisationError;
+use crate::parsing::TerminalSymbol;
 
 pub enum LexemeMatcher {
     WholeMatcher(Regex),
     StartMatcher(Regex)
 }
 
-pub enum LexemeBuilder<'t, T, U> where T: Display, T: Clone {
+pub enum LexemeBuilder<'t, T, U> where T: TerminalSymbol {
     StaticBuilder(T),
     DynamicBuilder(&'t dyn Fn(String, Location) -> Result<Token<T>, TokenisationError<T, U>>),
     ComplicatedBuilder(&'t dyn Fn(&mut TokeniserState<T, U>, Location) -> Result<Token<T>, TokenisationError<T, U>>)
 }
 
-pub struct LexemeTokeniser<'t, T, U> where T: Display, T: Clone {
+pub struct LexemeTokeniser<'t, T, U> where T: TerminalSymbol {
     pub matcher: LexemeMatcher,
     pub builder: LexemeBuilder<'t, T, U>
 }
 
-pub struct TokeniserState<'t, T, U> where T: Display, T: Clone {
+pub struct TokeniserState<'t, T, U> where T: TerminalSymbol {
     pub location:                Location,
     pub line_buffer:             Option<String>,
     line_stack:                  Peekable<Lines<'t>>,
@@ -34,7 +34,7 @@ pub struct TokeniserState<'t, T, U> where T: Display, T: Clone {
     phantom_error_type:          PhantomData<U>
 }
 
-impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
+impl<T, U> TokeniserState<'_, T, U> where T: TerminalSymbol {
     pub fn get_token(&mut self,
         tokeniser: &Tokeniser<T, U>
     ) -> Result<Token<T>, TokenisationError<T, U>> {
@@ -179,14 +179,14 @@ impl<T, U> TokeniserState<'_, T, U> where T: Display, T: Clone {
     }
 }
 
-pub struct Tokeniser<'t, T, U> where T: Display, T: Clone {
+pub struct Tokeniser<'t, T, U> where T: TerminalSymbol {
     lexemes:                   Vec<LexemeTokeniser<'t, T, U>>,
     error_handlers:            HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
     eof_handler:               &'t dyn Fn(Location) -> Token<T>,
     unexpected_symbol_handler: &'t dyn Fn(Location, char) -> TokenisationError<T, U>
 }
 
-impl<'t, T, U> Tokeniser<'t, T, U> where T: Display, T: Clone {
+impl<'t, T, U> Tokeniser<'t, T, U> where T: TerminalSymbol {
     pub fn new(
         lexemes:                   Vec<LexemeTokeniser<'t, T, U>>,
         error_handlers:            HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,

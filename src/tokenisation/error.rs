@@ -1,9 +1,8 @@
-use std::fmt::Display;
-
 use crate::tokenisation::token::Token;
+use crate::parsing::TerminalSymbol;
 
 #[derive(Debug)]
-pub struct TokenisationError<T, U> where T: Display {
+pub struct TokenisationError<T, U> where T: TerminalSymbol {
     pub partial_token: Token<T>,
     pub error_type:    U
 }

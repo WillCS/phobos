@@ -7,6 +7,7 @@ use crate::tokenisation::tokeniser::{Tokeniser, TokeniserState};
 use crate::tokenisation::token::{Token, Location};
 use crate::tokenisation::builder::{TokeniserBuilder};
 use crate::tokenisation::error::{TokenisationError, TokenisationErrorType};
+use crate::parsing::{TerminalSymbol, NonterminalSymbol};
 
 lazy_static!{
     pub static ref MULTILINE_START_REGEX:  Regex = Regex::new(r"^\[=*\[").unwrap();
@@ -76,6 +77,80 @@ pub enum LuaToken {
     Identifier(String),
     StringLiteral(String),
     NumberLiteral(f64)
+}
+
+impl TerminalSymbol for LuaToken {
+    fn get_name(&self) -> &'static str {
+        match self {
+            LuaToken::End              => "end",
+            LuaToken::Do               => "do",
+            LuaToken::While            => "while",
+            LuaToken::Repeat           => "repeat",
+            LuaToken::Until            => "until",
+            LuaToken::If               => "if",
+            LuaToken::In               => "in",
+            LuaToken::Then             => "then",
+            LuaToken::Elseif           => "elseif",
+            LuaToken::Else             => "else",
+            LuaToken::For              => "for",
+            LuaToken::Function         => "function",
+            LuaToken::Local            => "local",
+            LuaToken::Return           => "return",
+            LuaToken::Break            => "break",
+            LuaToken::True             => "true",
+            LuaToken::False            => "false",
+            LuaToken::Nil              => "nil",
+            LuaToken::And              => "and",
+            LuaToken::Or               => "or",
+            LuaToken::Not              => "not",
+            LuaToken::Goto             => "goto",
+            LuaToken::Equals           => "`=`",
+            LuaToken::DoubleEquals     => "`==`",
+            LuaToken::Dot              => "`.`",
+            LuaToken::Colon            => "`:`",
+            LuaToken::DoubleColon      => "`::`",
+            LuaToken::Comma            => "`,`",
+            LuaToken::LeftBracket      => "`[`",
+            LuaToken::RightBracket     => "`]`",
+            LuaToken::LeftParenthesis  => "`(`",
+            LuaToken::RightParenthesis => "`)`",
+            LuaToken::LeftBrace        => "`{`",
+            LuaToken::RightBrace       => "`}`",
+            LuaToken::LeftShift        => "`<<`",
+            LuaToken::RightShift       => "`>>`",
+            LuaToken::BitwiseAnd       => "`&`",
+            LuaToken::BitwiseOr        => "`|`",
+            LuaToken::BitwiseNeg       => "`~`",
+            LuaToken::Varargs          => "`...`",
+            LuaToken::Semicolon        => "`;`",
+            LuaToken::Plus             => "`+`",
+            LuaToken::Minus            => "`-`",
+            LuaToken::Multiply         => "`*`",
+            LuaToken::Divide           => "`/`",
+            LuaToken::FloorDivide      => "`//`",
+            LuaToken::Power            => "`^`",
+            LuaToken::Modulo           => "`%`",
+            LuaToken::Concat           => "`..`",
+            LuaToken::LessThan         => "`<`",
+            LuaToken::LessEq           => "`<=`",
+            LuaToken::GreaterThan      => "`>`",
+            LuaToken::GreaterEq        => "`>=`",
+            LuaToken::NotEq            => "`~=`",
+            LuaToken::Length           => "`#`",
+            LuaToken::Comment          => "Comment",
+            LuaToken::EndOfFile        => "<eof>",
+            LuaToken::Error(_)         => "Error",
+            LuaToken::Identifier(_)    => "Name",
+            LuaToken::StringLiteral(_) => "LiteralString",
+            LuaToken::NumberLiteral(_) => "Numeral"
+        }
+    }
+}
+
+impl NonterminalSymbol for LuaToken {
+    fn get_name(&self) -> &'static str {
+        <LuaToken as TerminalSymbol>::get_name(self)
+    }
 }
 
 impl Display for LuaToken {
@@ -207,17 +282,19 @@ fn parse_multiline_string(
     state:    &mut TokeniserState<LuaToken, TokenisationErrorType>,
     location: Location
 ) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
-    parse_multiline(state).map(|parsed_str| {
-        Token {
-            token_type: LuaToken::StringLiteral(parsed_str),
-            location:   location
-        }
-    }).ok_or(
-        TokenisationError {
-            partial_token: get_eof_token(location),
-            error_type:    TokenisationErrorType::UnfinishedLongString
-        }
-    )
+    parse_multiline(state)
+        .map(|parsed_str| {
+            Token {
+                token_type: LuaToken::StringLiteral(parsed_str),
+                location:   location
+            }
+        })
+        .ok_or(
+            TokenisationError {
+                partial_token: get_eof_token(location),
+                error_type:    TokenisationErrorType::UnfinishedLongString
+            }
+        )
 }
 
 fn parse_multiline_comment(
@@ -225,18 +302,20 @@ fn parse_multiline_comment(
     location: Location
 ) -> Result<Token<LuaToken>, TokenisationError<LuaToken, TokenisationErrorType>> {
     state.consume_chars(2);
-    
-    parse_multiline(state).map(|_| {
-        Token {
-            token_type: LuaToken::Comment,
-            location:   location
-        }
-    }).ok_or(
-        TokenisationError {
-            partial_token: get_eof_token(location),
-            error_type:    TokenisationErrorType::UnfinishedLongComment
-        }
-    )
+
+    parse_multiline(state)
+        .map(|_| {
+            Token {
+                token_type: LuaToken::Comment,
+                location:   location
+            }
+        })
+        .ok_or(
+            TokenisationError {
+                partial_token: get_eof_token(location),
+                error_type:    TokenisationErrorType::UnfinishedLongComment
+            }
+        )
 }
 
 fn get_eof_token(location: Location) -> Token<LuaToken> {

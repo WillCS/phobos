@@ -2,7 +2,7 @@ use crate::parsing::*;
 use crate::tokenisation::LuaToken;
 
 pub fn get_lua_parser() {
-    Production::<LuaToken, LuaToken>::builder()
+    let production = Production::<LuaToken, LuaToken>::builder()
         .producing(LuaToken::Varargs)
         .from(SymbolSequence::Sequence(vec![
             SymbolSequence::from_nonterminal(LuaToken::If),
@@ -25,13 +25,13 @@ pub fn get_lua_parser() {
             ),
             SymbolSequence::from_nonterminal(LuaToken::End)
         ]))
-        .build();
+        .with_handler(&reduce_production)
+        .build()
+        .unwrap();
+
+    println!("{}", production);
 }
 
-macro_rules! seq {
-    ($($sym:expr),+) => {
-        SymbolSequence::Sequence(vec![$(
-            SymbolSequence::from_terminal($sym)
-        )+])
-    };
+fn reduce_production(symbols: Vec<Symbol<LuaToken, LuaToken>>) -> LuaToken {
+    LuaToken::Colon
 }

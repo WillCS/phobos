@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use std::vec::Vec;
 use std::collections::HashMap;
 use regex::Regex;
@@ -7,16 +6,17 @@ use regex::Regex;
 use crate::tokenisation::tokeniser::{Tokeniser, LexemeTokeniser, LexemeBuilder, LexemeMatcher, TokeniserState};
 use crate::tokenisation::token::{Token, Location};
 use crate::tokenisation::error::TokenisationError;
+use crate::parsing::TerminalSymbol;
 
-pub struct TokeniserBuilder<'t, T, U> where T: Display, T: Clone {
+pub struct TokeniserBuilder<'t, T, U> where T: TerminalSymbol {
     lexemes:                   Vec<LexemeTokeniser<'t, T, U>>,
     error_handlers:            HashMap<char, &'t dyn Fn(Location, String) -> TokenisationError<T, U>>,
     eof_handler:               Option<&'t dyn Fn(Location) -> Token<T>>,
     unexpected_symbol_handler: Option<&'t dyn Fn(Location, char) -> TokenisationError<T, U>>
 }
 
-impl<'t, T, U> TokeniserBuilder<'t, T, U> where T: Display, T: Clone {
-    pub fn new<'u, V, W>() -> TokeniserBuilder<'u, V, W> where V: Display, V: Clone {
+impl<'t, T, U> TokeniserBuilder<'t, T, U> where T: TerminalSymbol {
+    pub fn new<'u, V, W>() -> TokeniserBuilder<'u, V, W> where V: TerminalSymbol {
         TokeniserBuilder::<'u, V, W> {
             lexemes:                   Vec::new(),
             error_handlers:            HashMap::new(),

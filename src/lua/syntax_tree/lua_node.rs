@@ -1,8 +1,11 @@
+use std::fmt::{Display, Formatter};
+use crate::parsing::NonterminalSymbol;
+
 pub enum LuaNode {
-    ChunkNode(LuaChunk),
-    BlockNode(LuaBlock),
-    StatNode(LuaStat),
-    AttNameListNode(LuaAttNameList),
+    Chunk(LuaChunk),
+    Block(LuaBlock),
+    Stat(LuaStat),
+    AttNameList(LuaAttNameList),
     Attrib(LuaAttrib),
     RetStat(LuaRetStat),
     Label(LuaLabel),
@@ -12,6 +15,18 @@ pub enum LuaNode {
     NameList(LuaNameList),
     ExpList(LuaExpList),
     Exp(LuaExp),
+    Exp2(LuaExp2),
+    Exp3(LuaExp3),
+    Exp4(LuaExp4),
+    Exp5(LuaExp5),
+    Exp6(LuaExp6),
+    Exp7(LuaExp7),
+    Exp8(LuaExp8),
+    Exp9(LuaExp9),
+    Exp10(LuaExp10),
+    Exp11(LuaExp11),
+    Exp12(LuaExp12),
+    Exp13(LuaExp13),
     PrefixExp(LuaPrefixExp),
     FunctionCall(LuaFunctionCall),
     Args(LuaArgs),
@@ -22,6 +37,54 @@ pub enum LuaNode {
     FieldList(LuaFieldList),
     Field(LuaField),
     FieldSep(LuaFieldSep)
+}
+
+impl Display for LuaNode {
+    fn fmt(&self, _: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        todo!()
+    }
+}
+
+impl NonterminalSymbol for LuaNode {
+    fn get_name(&self) -> &'static str {
+        match self {
+            LuaNode::Chunk(_)            => "chunk",
+            LuaNode::Block(_)            => "block",
+            LuaNode::Stat(_)             => "stat",
+            LuaNode::AttNameList(_)      => "attnamelist",
+            LuaNode::Attrib(_)           => "attrib",
+            LuaNode::RetStat(_)          => "retstat",
+            LuaNode::Label(_)            => "label",
+            LuaNode::FuncName(_)         => "funcname",
+            LuaNode::VarList(_)          => "varlist",
+            LuaNode::Var(_)              => "var",
+            LuaNode::NameList(_)         => "namelist",
+            LuaNode::ExpList(_)          => "explist",
+            LuaNode::Exp(_)              => "exp",
+            LuaNode::Exp2(_)             => "exp2",
+            LuaNode::Exp3(_)             => "exp3",
+            LuaNode::Exp4(_)             => "exp4",
+            LuaNode::Exp5(_)             => "exp5",
+            LuaNode::Exp6(_)             => "exp6",
+            LuaNode::Exp7(_)             => "exp7",
+            LuaNode::Exp8(_)             => "exp8",
+            LuaNode::Exp9(_)             => "exp9",
+            LuaNode::Exp10(_)            => "exp10",
+            LuaNode::Exp11(_)            => "exp11",
+            LuaNode::Exp12(_)            => "exp12",
+            LuaNode::Exp13(_)            => "exp13",
+            LuaNode::PrefixExp(_)        => "prefixexp",
+            LuaNode::FunctionCall(_)     => "functioncall",
+            LuaNode::Args(_)             => "args",
+            LuaNode::FunctionDef(_)      => "functiondef",
+            LuaNode::FuncBody(_)         => "funcnody",
+            LuaNode::ParList(_)          => "parlist",
+            LuaNode::TableConstructor(_) => "tableconstructor",
+            LuaNode::FieldList(_)        => "fieldlist",
+            LuaNode::Field(_)            => "field",
+            LuaNode::FieldSep(_)         => "fieldsep"
+        }
+    }
 }
 
 pub struct LuaChunk {}
