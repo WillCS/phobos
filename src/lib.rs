@@ -2,7 +2,7 @@ mod tokenisation;
 mod parsing;
 mod lua;
 
-pub use tokenisation::get_lua_tokeniser;
+pub use lua::get_lua_tokeniser;
 pub use parsing::get_lua_parser;
 
 pub fn test_fn() -> bool {

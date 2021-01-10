@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+
 use crate::tokenisation::token::Token;
 use crate::parsing::TerminalSymbol;
 

@@ -1,9 +1,8 @@
-use crate::lua::LuaNonterminal;
+use crate::lua::{LuaTerminal, LuaNonterminal};
 use crate::parsing::*;
-use crate::tokenisation::LuaToken;
 
 macro_rules! t {
-    ($t:ident) => { SymbolSequence::from_terminal(LuaToken::$t) };
+    ($t:ident) => { SymbolSequence::from_terminal(LuaTerminal::$t) };
 }
 
 macro_rules! n {
@@ -27,7 +26,7 @@ macro_rules! maybe {
 }
 
 pub fn get_lua_parser() {
-    let mut productions: Vec<Production<LuaToken, LuaNonterminal>> = Vec::new();
+    let mut productions: Vec<Production<LuaTerminal, LuaNonterminal>> = Vec::new();
 
     productions.push(Production::builder()
         .producing(LuaNonterminal::Chunk)
@@ -543,6 +542,6 @@ pub fn get_lua_parser() {
     
 }
 
-fn reduce_production(symbols: Vec<Symbol<LuaToken, LuaNonterminal>>) -> LuaNonterminal {
+fn reduce_production(symbols: Vec<Symbol<LuaTerminal, LuaNonterminal>>) -> LuaNonterminal {
     LuaNonterminal::Exp
 }

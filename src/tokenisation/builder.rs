@@ -2,7 +2,6 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use regex::Regex;
 
-
 use crate::tokenisation::tokeniser::{Tokeniser, LexemeTokeniser, LexemeBuilder, LexemeMatcher, TokeniserState};
 use crate::tokenisation::token::{Token, Location};
 use crate::tokenisation::error::TokenisationError;
