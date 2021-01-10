@@ -25,7 +25,7 @@ impl Display for LuaTokenData {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum LuaTerminal {
     End,
     Do,
@@ -87,7 +87,8 @@ pub enum LuaTerminal {
     Error,
     Identifier,
     StringLiteral,
-    NumberLiteral
+    NumberLiteral,
+    Empty
 }
 
 impl TerminalSymbol for LuaTerminal {
@@ -155,7 +156,8 @@ impl TerminalSymbol for LuaTerminal {
             LuaTerminal::Error            => "Error",
             LuaTerminal::Identifier       => "Name",
             LuaTerminal::StringLiteral    => "LiteralString",
-            LuaTerminal::NumberLiteral    => "Numeral"
+            LuaTerminal::NumberLiteral    => "Numeral",
+            LuaTerminal::Empty            => "ε"
         }
     }
 }

@@ -1,7 +1,9 @@
-use crate::tokenisation::TokenData;
+use std::hash::Hash;
 use std::fmt::Display;
 
-pub trait TerminalSymbol: Display + Clone {
+use crate::tokenisation::TokenData;
+
+pub trait TerminalSymbol: Display + Clone + Copy + Eq + Hash {
     type DataType: TokenData;
     
     fn get_name(&self) -> &'static str;

@@ -1,7 +1,4 @@
-use crate::parsing::symbol::{Symbol, SymbolSequence};
-use crate::parsing::production::Production;
-use crate::parsing::nonterminal_symbol::NonterminalSymbol;
-use crate::parsing::terminal_symbol::TerminalSymbol;
+use crate::parsing::{Symbol, SymbolSequence, Production, TerminalSymbol, NonterminalSymbol};
 
 pub struct ProductionBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSymbol {
     produced_symbol:  Option<U>,

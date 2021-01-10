@@ -1,15 +1,12 @@
 use std::fmt::Formatter;
 use std::fmt::Display;
 
-use crate::parsing::symbol::{Symbol, SymbolSequence};
-use crate::parsing::production_builder::ProductionBuilder;
-use crate::parsing::terminal_symbol::TerminalSymbol;
-use crate::parsing::nonterminal_symbol::NonterminalSymbol;
+use crate::parsing::{Symbol, SymbolSequence, ProductionBuilder, TerminalSymbol, NonterminalSymbol};
 
 pub struct Production<'t, T, U> where T: TerminalSymbol, U: NonterminalSymbol {
-    produced_symbol:  U,
-    consumed_symbols: SymbolSequence<T, U>,
-    reduce_handler:   &'t dyn FnMut(Vec<Symbol<T, U>>) -> U
+    pub produced_symbol:  U,
+    pub consumed_symbols: SymbolSequence<T, U>,
+    pub reduce_handler:   &'t dyn FnMut(Vec<Symbol<T, U>>) -> U
 }
 
 impl<'t, T, U> Production<'t, T, U> where T: TerminalSymbol, U: NonterminalSymbol {
@@ -27,6 +24,10 @@ impl<'t, T, U> Production<'t, T, U> where T: TerminalSymbol, U: NonterminalSymbo
             consumed_symbols,
             reduce_handler
         }
+    }
+
+    pub fn produces(&self, symbol: U) -> bool {
+        self.produced_symbol == symbol
     }
 }
 

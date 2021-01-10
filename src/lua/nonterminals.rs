@@ -1,8 +1,10 @@
 use std::fmt::{Display, Formatter};
+use std::mem::discriminant;
 
 use crate::parsing::NonterminalSymbol;
 use crate::lua::syntax_tree::LuaNode;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum LuaNonterminal {
     Chunk,
     Block,
@@ -88,5 +90,9 @@ impl NonterminalSymbol for LuaNonterminal {
             LuaNonterminal::Field            => "field",
             LuaNonterminal::FieldSep         => "fieldsep"
         }
+    }
+
+    fn same_symbol(&self, other: &Self) -> bool {
+        discriminant(self) == discriminant(other)
     }
 }
