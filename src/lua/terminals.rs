@@ -1,5 +1,7 @@
 use std::fmt::{Display, Formatter};
 
+use enum_iterator::IntoEnumIterator;
+
 use crate::tokenisation::TokenData;
 use crate::parsing::TerminalSymbol;
 
@@ -25,7 +27,7 @@ impl Display for LuaTokenData {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, IntoEnumIterator)]
 pub enum LuaTerminal {
     End,
     Do,
@@ -88,7 +90,6 @@ pub enum LuaTerminal {
     Identifier,
     StringLiteral,
     NumberLiteral,
-    Empty
 }
 
 impl TerminalSymbol for LuaTerminal {
@@ -157,7 +158,6 @@ impl TerminalSymbol for LuaTerminal {
             LuaTerminal::Identifier       => "Name",
             LuaTerminal::StringLiteral    => "LiteralString",
             LuaTerminal::NumberLiteral    => "Numeral",
-            LuaTerminal::Empty            => "ε"
         }
     }
 }

@@ -543,7 +543,6 @@ pub fn get_lua_parser() {
     let parser_builder = ParserBuilder::new()
         .with_productions(&mut productions)
         .with_start_symbol(LuaNonterminal::Chunk)
-        .with_empty_symbol(LuaTerminal::Empty)
         .build();
     
 }

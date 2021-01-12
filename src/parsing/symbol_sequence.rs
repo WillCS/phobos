@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter, Write};
 use std::vec::Vec;
 
 /** Symbol used for construction of productions for the parser. */
+#[derive(Clone)]
 pub enum SymbolSequence<T, U> where T: TerminalSymbol, U: NonterminalSymbol {
     Single(Symbol<T, U>),
     Sequence(Vec<SymbolSequence<T, U>>),

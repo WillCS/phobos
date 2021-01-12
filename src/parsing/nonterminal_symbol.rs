@@ -1,7 +1,9 @@
 use std::hash::Hash;
 use std::fmt::Display;
 
-pub trait NonterminalSymbol: Display + Clone + Copy + Eq + Hash {
+use enum_iterator::IntoEnumIterator;
+
+pub trait NonterminalSymbol: Display + Clone + Copy + Eq + Hash + IntoEnumIterator {
     type NodeType;
 
     fn get_name(&self) -> &'static str;

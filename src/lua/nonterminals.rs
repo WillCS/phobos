@@ -1,10 +1,12 @@
 use std::fmt::{Display, Formatter};
 use std::mem::discriminant;
 
+use enum_iterator::IntoEnumIterator;
+
 use crate::parsing::NonterminalSymbol;
 use crate::lua::syntax_tree::LuaNode;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, IntoEnumIterator)]
 pub enum LuaNonterminal {
     Chunk,
     Block,

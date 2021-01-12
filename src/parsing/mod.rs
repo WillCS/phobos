@@ -6,7 +6,7 @@ mod terminal_symbol;
 mod nonterminal_symbol;
 mod parser_builder;
 
-pub use symbol::Symbol;
+pub use symbol::{Symbol, PossiblyEmptyTerminalSymbol};
 pub use symbol_sequence::SymbolSequence;
 pub use production::Production;
 pub use production_builder::ProductionBuilder;
