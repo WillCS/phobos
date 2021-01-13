@@ -536,9 +536,9 @@ pub fn get_lua_parser() {
         .build()
         .unwrap());
 
-    for p in productions {
-        println!("{}", p);
-    }
+    // for p in productions {
+    //     println!("{}", p);
+    // }
 
     let parser_builder = ParserBuilder::new()
         .with_productions(&mut productions)
