@@ -21,6 +21,14 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
         }
     }
 
+    pub fn with_production(mut self,
+        production: Production<'t, T, U>
+    ) -> ParserBuilder<'t, T, U> {
+
+        self.productions.push(production);
+        return self;
+    }
+
     pub fn with_productions(mut self,
         productions: &mut Vec<Production<'t, T, U>>
     ) -> ParserBuilder<'t, T, U> {
@@ -44,5 +52,17 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
                 println!("- {}", t);
             }
         }
+    }
+    
+    /** Helper method to determine whether a production producing the given
+     *  nonterminal has been added or not. */
+    fn production_exists_for(&self, nonterminal: U) -> bool {
+        for p in &self.productions {
+            if p.produced_symbol == nonterminal {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

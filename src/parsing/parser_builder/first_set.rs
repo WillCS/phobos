@@ -2,17 +2,38 @@ use std::collections::HashSet;
 
 use crate::parsing::{ParserBuilder, TerminalSymbol, NonterminalSymbol, SymbolSequence, PossiblyEmptyTerminalSymbol, Symbol};
 
+/** 
+ * This file contains functions relating to the derivation of First Sets. 
+ * 
+ * The First Set, FIRST(a) for symbol a is the set of terminal symbols that can appear
+ * at the beginning of strings derived from a.
+ * 
+ * First Sets are used in the derivation of Follow Sets.
+ */
 impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSymbol {
-    pub(super) fn derive_first_sets(&mut self) {
-        U::into_enum_iter().map(|nonterminal| {
-            let mut break_set = Vec::new();
-            self.get_first_set_for(&nonterminal, &mut break_set);
-        }).for_each(drop);
-    }
     
-    fn derive_first_set_for(&mut self, non_terminal: U, break_set: &mut Vec<U>) -> &HashSet<PossiblyEmptyTerminalSymbol<T>> {
-        let mut first_set = HashSet::new();
+    /**
+     * Derives the First Sets for all nonterminal symbols and stores them in the
+     * struct's list of First Sets.
+     */
+    pub(super) fn derive_first_sets(&mut self) {
+        U::into_enum_iter()
+            .for_each(|nonterminal| {
+                let mut break_set = Vec::new();
+                let first_set = self.derive_first_set_for(nonterminal, &mut break_set);
 
+                self.first_sets.insert(nonterminal, first_set);
+            });
+    }
+
+    /**
+     * Derives and returns the first set for the specified nonterminal symbol.
+     */
+    fn derive_first_set_for(&mut self,
+        non_terminal: U, 
+        break_set:    &mut Vec<U>
+    ) -> HashSet<PossiblyEmptyTerminalSymbol<T>> {
+        let mut first_set = HashSet::new();
         let mut relevant_productions = Vec::new();
 
         for p in &self.productions {
@@ -25,11 +46,13 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
             self.derive_first_set_for_symbol_sequence(&p, &mut first_set, break_set);
         }
 
-        self.first_sets.insert(non_terminal, first_set);
-
-        return self.first_sets.get(&non_terminal).unwrap();
+        return first_set;
     }
 
+    /**
+     * Delegates how the First Set of a SymbolSequence should be derived based 
+     * on what kind of SymbolSequence it is.
+     */
     fn derive_first_set_for_symbol_sequence(&mut self, 
         seq:       &SymbolSequence<T, U>,
         first_set: &mut HashSet<PossiblyEmptyTerminalSymbol<T>>,
@@ -44,6 +67,13 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
         };
     }
 
+    /**
+     * Handles derivation of the First Set for a sequence of symbols.
+     * This function breaks down the sequence into a set of symbols that could
+     * possibly come at the start. That is - the First Set of the first symbol
+     * in the sequence, unless that symbol can derive ε, in which case we need
+     * the First Set of both the first and second symbols, etc.
+     */
     fn derive_first_set_for_sequence(&mut self,
         seq:       &Vec<SymbolSequence<T, U>>,
         first_set: &mut HashSet<PossiblyEmptyTerminalSymbol<T>>,
@@ -62,6 +92,11 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
         }
     }
 
+    /** 
+     * Handles the derivation of the First Set for an optional sequence of symbols.
+     * This works exactly the same as the derivation for a repeated sequence of symbols,
+     * so we use a thunk, `first_set_repeated_optional_thunk` to handle it.
+     */
     fn derive_first_set_for_optional(&mut self,
         seq:       &SymbolSequence<T, U>,
         first_set: &mut HashSet<PossiblyEmptyTerminalSymbol<T>>,
@@ -70,6 +105,11 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
         self.first_set_repeated_optional_thunk(seq, first_set, break_set);
     }
 
+    /** 
+     * Handles the derivation of the First Set for a repeated sequence of symbols.
+     * This works exactly the same as the derivation for a repeated sequence of symbols,
+     * so we use a thunk, `first_set_repeated_optional_thunk` to handle it.
+     */
     fn derive_first_set_for_repeated(&mut self,
         seq:       &SymbolSequence<T, U>,
         first_set: &mut HashSet<PossiblyEmptyTerminalSymbol<T>>,
@@ -77,7 +117,12 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
     ) {
         self.first_set_repeated_optional_thunk(seq, first_set, break_set);
     }
-
+    
+    /**
+     * Handles the derivation of the First Set for a number of alternative
+     * sequences of symbols. This just takes the First Sets of all the
+     * alternatives and lumps them together.
+     */
     fn derive_first_set_for_alternatives(&mut self,
         alts:      &Vec<SymbolSequence<T, U>>,
         first_set: &mut HashSet<PossiblyEmptyTerminalSymbol<T>>,
@@ -88,6 +133,11 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
         }
     }
 
+    /**
+     * Helper method for derivation of First Sets for both optional and 
+     * repeated sequences of symbols. This just takes the First Set of the
+     * contained sequence and adds ε.
+     */
     fn first_set_repeated_optional_thunk(&mut self,
         seq:       &SymbolSequence<T, U>,
         first_set: &mut HashSet<PossiblyEmptyTerminalSymbol<T>>,
@@ -97,26 +147,40 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
         first_set.insert(PossiblyEmptyTerminalSymbol::Empty);
     }
 
+    /**
+     * Helper method for derivation of First Sets for individual symbols.
+     * If the provided symbol is terminal, it just gets added to the set.
+     * If the provided symbol is nonterminal, its First Set gets added to the set.
+     * If the provided symbol is empty, ε is added to the set.
+     */
     fn derive_first_set_for_symbol(&mut self,
         symbol:    &Symbol<T, U>,
         first_set: &mut HashSet<PossiblyEmptyTerminalSymbol<T>>,
         break_set: &mut Vec<U>
     ) {
         match symbol {
-            Symbol::Terminal(s)    => { first_set.insert(PossiblyEmptyTerminalSymbol::Terminal(*s)); },
+            Symbol::Terminal(s)    => { 
+                first_set.insert(PossiblyEmptyTerminalSymbol::Terminal(*s));
+            },
             Symbol::Nonterminal(n) => { 
                 if !break_set.contains(n) {
                     break_set.push(*n);
                     first_set.extend(self.get_first_set_for(n, break_set).clone());
                 }
             },
-            Symbol::Empty          => { first_set.insert(PossiblyEmptyTerminalSymbol::Empty); }
+            Symbol::Empty          => { 
+                first_set.insert(PossiblyEmptyTerminalSymbol::Empty);
+            }
         }
     }
 
-    fn get_first_set_for(&mut self, non_terminal: &U, break_set: &mut Vec<U>) -> &HashSet<PossiblyEmptyTerminalSymbol<T>> {
+    /**
+     * Serves as the connection between the bottom of the SymbolSequence tree back
+     * to the top, used to derive or get First Sets for nonterminals that derive another nonterminal.
+     */
+    fn get_first_set_for(&mut self, non_terminal: &U, break_set: &mut Vec<U>) -> HashSet<PossiblyEmptyTerminalSymbol<T>> {
         if self.first_sets.contains_key(&non_terminal) {
-            return self.first_sets.get(&non_terminal).unwrap();
+            return self.first_sets.get(&non_terminal).unwrap().clone();
         } else {
             return self.derive_first_set_for(*non_terminal, break_set);
         }

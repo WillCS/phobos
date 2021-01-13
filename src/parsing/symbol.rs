@@ -4,7 +4,7 @@ use crate::parsing::nonterminal_symbol::NonterminalSymbol;
 use crate::parsing::terminal_symbol::TerminalSymbol;
 
 /** Symbol used internally within the parser. */
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Symbol<T, U> where T: TerminalSymbol, U: NonterminalSymbol {
     Terminal(T),
     Nonterminal(U),

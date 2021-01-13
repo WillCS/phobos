@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::parsing::{Symbol, TerminalSymbol, NonterminalSymbol};
 
 use std::fmt::{Display, Formatter, Write};
@@ -39,6 +40,64 @@ impl<T, U> SymbolSequence<T, U> where T: TerminalSymbol, U: NonterminalSymbol {
         seq: SymbolSequence<T, U>,
     ) -> SymbolSequence<T, U> {
         SymbolSequence::Optional(Box::new(seq))
+    }
+}
+
+impl<T, U> SymbolSequence<T, U> where T: TerminalSymbol, U: NonterminalSymbol {
+    // pub fn get_starting_symbols(&self) -> HashSet<Symbol<T, U>> {
+    //     let mut starting_symbols = HashSet::new();
+    //     match self {
+    //         SymbolSequence::Single(sym)   => { starting_symbols.insert(*sym); },
+    //         SymbolSequence::Sequence(seq) => {
+    //             for sub in seq {
+    //                 let sub_starting_symbols = sub.get_starting_symbols();
+    //                 let contains_empty = sub_starting_symbols.contains(&Symbol::Empty);
+    //                 starting_symbols.extend(&sub_starting_symbols);
+
+    //                 if !contains_empty {
+    //                     break;
+    //                 }
+    //             }
+    //         },
+    //         SymbolSequence::Optional(seq) | SymbolSequence::Repeated(seq) => {
+    //             let seq_starting_symbols = seq.get_starting_symbols();
+    //             starting_symbols.extend(&seq_starting_symbols);
+    //             starting_symbols.insert(Symbol::Empty);
+    //         },
+    //         SymbolSequence::Alternatives(alts) => {
+    //             for alt in alts {
+    //                 let alt_starting_symbols = alt.get_starting_symbols();
+    //                 starting_symbols.extend(alt_starting_symbols);
+    //             }
+    //         }
+    //     };
+    //     return starting_symbols;
+    // }
+
+    pub fn collect_dependencies(&self) -> HashSet<Symbol<T, U>> {
+        let mut symbols = HashSet::new();
+
+        match self {
+            SymbolSequence::Single(sym)   => { symbols.insert(*sym); }
+            SymbolSequence::Sequence(seq) => {
+                for sub in seq {
+                    let sub_symbols = sub.collect_dependencies();
+                    symbols.extend(sub_symbols);
+                }
+            },
+            SymbolSequence::Optional(seq) | SymbolSequence::Repeated(seq) => {
+                let seq_symbols = seq.collect_dependencies();
+                symbols.extend(seq_symbols);
+            },
+            SymbolSequence::Alternatives(alts) => {
+                for alt in alts {
+                    let alt_symbols = alt.collect_dependencies();
+                    symbols.extend(alt_symbols);
+                }
+            }
+        }
+
+        return symbols;
     }
 }
 
