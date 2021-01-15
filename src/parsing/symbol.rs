@@ -35,3 +35,18 @@ impl<T> Display for PossiblyEmptyTerminalSymbol<T> where T: TerminalSymbol {
         }
     }
 }
+
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub enum PossiblyEndOfFileTerminalSymbol<T> where T: TerminalSymbol {
+    Terminal(T),
+    EndOfFile
+}
+
+impl<T> Display for PossiblyEndOfFileTerminalSymbol<T> where T: TerminalSymbol {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            PossiblyEndOfFileTerminalSymbol::Terminal(s)    => write!(f, "{}", s.get_name()),
+            PossiblyEndOfFileTerminalSymbol::EndOfFile      => write!(f, "$")
+        }
+    }
+}

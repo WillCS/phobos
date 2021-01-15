@@ -1,14 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::parsing::{PossiblyEmptyTerminalSymbol, TerminalSymbol, NonterminalSymbol, Production};
+use crate::parsing::{PossiblyEmptyTerminalSymbol, PossiblyEndOfFileTerminalSymbol, TerminalSymbol, NonterminalSymbol, Production};
 
 mod first_set;
+mod follow_set;
 
-pub struct ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSymbol {
-    productions:  Vec<Production<'t, T, U>>,
-    first_sets:   HashMap<U, HashSet<PossiblyEmptyTerminalSymbol<T>>>,
-    follow_sets:  HashMap<U, HashSet<T>>,
-    start_symbol: Option<U>,
+pub struct ParserBuilder<'t, T, N> where T: TerminalSymbol, N: NonterminalSymbol {
+    productions:  Vec<Production<'t, T, N>>,
+    first_sets:   HashMap<N, HashSet<PossiblyEmptyTerminalSymbol<T>>>,
+    follow_sets:  HashMap<N, HashSet<PossiblyEndOfFileTerminalSymbol<T>>>,
+    start_symbol: Option<N>,
 }
 
 impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSymbol {
@@ -45,6 +46,7 @@ impl<'t, T, U> ParserBuilder<'t, T, U> where T: TerminalSymbol, U: NonterminalSy
 
     pub fn build(mut self) {
         self.derive_first_sets();
+        self.derive_follow_sets();
 
         for (k, v) in self.first_sets {
             println!("First set of {}", k);
